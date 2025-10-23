@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Simple Task Tracker",
+  title: "Master Task Tracker",
   description: "A clean, minimal web-based task tracker with Excel-like functionality",
   keywords: ["task", "tracker", "productivity", "management", "todo"],
   authors: [{ name: "Task Tracker Team" }],

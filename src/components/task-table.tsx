@@ -119,7 +119,7 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Simple Task Tracker</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Master Task Tracker</h1>
         <Button onClick={handleAddTask} className="bg-blue-600 hover:bg-blue-700">
           Add Task
         </Button>

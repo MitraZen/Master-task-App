@@ -1,4 +1,4 @@
-# Simple Task Tracker
+# Master Task Tracker
 
 A clean, minimal web-based task tracker built with Next.js 15 and Supabase, inspired by Excel spreadsheet functionality.
 

@@ -1,0 +1,194 @@
+'use client'
+
+import { useState } from 'react'
+import { Task } from '@/types/task'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Filter, X } from 'lucide-react'
+
+interface TaskFiltersProps {
+  tasks: Task[]
+  onFilter: (filteredTasks: Task[]) => void
+}
+
+export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
+  const [filters, setFilters] = useState({
+    priority: 'all',
+    status: 'all',
+    frequency: 'all',
+    search: ''
+  })
+
+  const handleFilterChange = (key: string, value: string) => {
+    const newFilters = { ...filters, [key]: value }
+    setFilters(newFilters)
+    applyFilters(tasks, newFilters)
+  }
+
+  const clearFilter = (key: string) => {
+    const newFilters = { ...filters, [key]: '' }
+    setFilters(newFilters)
+    applyFilters(tasks, newFilters)
+  }
+
+  const applyFilters = (taskList: Task[], currentFilters: typeof filters) => {
+    let filtered = [...taskList]
+
+    // Apply search filter
+    if (currentFilters.search) {
+      filtered = filtered.filter(task =>
+        task.task_name.toLowerCase().includes(currentFilters.search.toLowerCase()) ||
+        (task.notes && task.notes.toLowerCase().includes(currentFilters.search.toLowerCase()))
+      )
+    }
+
+    // Apply priority filter
+    if (currentFilters.priority && currentFilters.priority !== 'all') {
+      filtered = filtered.filter(task => task.priority === currentFilters.priority)
+    }
+
+    // Apply status filter
+    if (currentFilters.status && currentFilters.status !== 'all') {
+      filtered = filtered.filter(task => task.status === currentFilters.status)
+    }
+
+    // Apply frequency filter
+    if (currentFilters.frequency && currentFilters.frequency !== 'all') {
+      filtered = filtered.filter(task => task.frequency === currentFilters.frequency)
+    }
+
+    onFilter(filtered)
+  }
+
+  const clearFilters = () => {
+    const clearedFilters = {
+      priority: 'all',
+      status: 'all',
+      frequency: 'all',
+      search: ''
+    }
+    setFilters(clearedFilters)
+    onFilter(tasks)
+  }
+
+  const hasActiveFilters = Object.entries(filters).some(([key, value]) => 
+    key === 'search' ? value !== '' : value !== '' && value !== 'all'
+  )
+
+  // Get unique values for dropdowns
+  const priorities = [...new Set(tasks.map(task => task.priority))]
+  const statuses = [...new Set(tasks.map(task => task.status))]
+  const frequencies = [...new Set(tasks.map(task => task.frequency))]
+
+  return (
+    <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+      <div className="flex items-center space-x-2">
+        <Filter className="h-5 w-5 text-gray-600" />
+        <h3 className="font-semibold text-gray-700">Filters</h3>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Clear All
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Search</label>
+          <Input
+            placeholder="Search tasks..."
+            value={filters.search}
+            onChange={(e) => handleFilterChange('search', e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Priority</label>
+          <Select
+            value={filters.priority}
+            onValueChange={(value) => handleFilterChange('priority', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Priorities" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              {priorities.map(priority => (
+                <SelectItem key={priority} value={priority}>
+                  {priority}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Status</label>
+          <Select
+            value={filters.status}
+            onValueChange={(value) => handleFilterChange('status', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {statuses.map(status => (
+                <SelectItem key={status} value={status}>
+                  {status}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Frequency</label>
+          <Select
+            value={filters.frequency}
+            onValueChange={(value) => handleFilterChange('frequency', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Frequencies" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Frequencies</SelectItem>
+              {frequencies.map(frequency => (
+                <SelectItem key={frequency} value={frequency}>
+                  {frequency}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Sort By</label>
+          <Select
+            onValueChange={(value) => {
+              // This would need to be implemented with the parent component
+              console.log('Sort by:', value)
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Due Date" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="due_date">Due Date</SelectItem>
+              <SelectItem value="start_date">Start Date</SelectItem>
+              <SelectItem value="priority">Priority</SelectItem>
+              <SelectItem value="task_name">Task Name</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  )
+}

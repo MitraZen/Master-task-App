@@ -11,12 +11,17 @@ import { getDatabaseStatus } from '@/lib/env'
 import { LocalStorageManager, SyncManager } from '@/lib/persistence'
 import ProtectedRoute from '@/components/protected-route'
 import { useAuth } from '@/contexts/auth-context'
+import { UndoDelete } from '@/components/undo-delete'
 
 function TasksPageContent() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { logout, username } = useAuth()
+  
+  // Deletion state
+  const [deletedTask, setDeletedTask] = useState<Task | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchTasks = async () => {
     try {
@@ -128,8 +133,13 @@ function TasksPageContent() {
   }
 
   const deleteTask = async (id: string) => {
+    const taskToDelete = tasks.find(t => t.id === id)
+    if (!taskToDelete) return
+
+    setIsDeleting(true)
+    
     try {
-      // Remove from local state immediately
+      // Remove from local state immediately for better UX
       setTasks(prev => prev.filter(t => t.id !== id))
       
       // Try to delete from database
@@ -138,13 +148,45 @@ function TasksPageContent() {
       })
 
       if (!response.ok) {
-        console.log('Database not available, using local state only')
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || 'Failed to delete task from database'
+        
+        // Restore task to local state if database deletion failed
+        setTasks(prev => [...prev, taskToDelete])
+        
+        showToast.error(`Database error: ${errorMessage}`)
         return
       }
+
+      // Success - show undo option
+      setDeletedTask(taskToDelete)
+      showToast.success('Task deleted successfully')
+      
+      // Save updated tasks to localStorage
+      LocalStorageManager.saveTasks(tasks.filter(t => t.id !== id))
+      
     } catch (err) {
-      console.log('Database not available, using local state only')
-      // Task is already removed from local state above
+      // Network error - restore task to local state
+      setTasks(prev => [...prev, taskToDelete])
+      
+      console.error('Network error during deletion:', err)
+      showToast.error('Network error: Unable to delete task. Please check your connection.')
+    } finally {
+      setIsDeleting(false)
     }
+  }
+
+  const undoDelete = (task: Task) => {
+    // Restore the task to the tasks list
+    setTasks(prev => [...prev, task])
+    setDeletedTask(null)
+    
+    // Save updated tasks to localStorage
+    LocalStorageManager.saveTasks([...tasks, task])
+  }
+
+  const dismissUndo = () => {
+    setDeletedTask(null)
   }
 
   useEffect(() => {
@@ -218,6 +260,13 @@ function TasksPageContent() {
             </p>
           </div>
         )}
+        
+        {/* Undo delete notification */}
+        <UndoDelete
+          deletedTask={deletedTask}
+          onUndo={undoDelete}
+          onDismiss={dismissUndo}
+        />
       </div>
     </div>
   )

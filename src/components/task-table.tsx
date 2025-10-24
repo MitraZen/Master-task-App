@@ -10,6 +10,7 @@ import { CheckCircle, Circle, Edit, Trash2, Settings } from 'lucide-react'
 import { TaskModal } from './task-modal'
 import { TaskFilters } from './task-filters'
 import AdminDropdownManager from './admin-dropdown-manager'
+import { DeleteConfirmationDialog } from './delete-confirmation-dialog'
 
 interface TaskTableProps {
   tasks: Task[]
@@ -23,6 +24,10 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isAdminOpen, setIsAdminOpen] = useState(false)
   const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks)
+  
+  // Delete confirmation state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
 
   useEffect(() => {
     setFilteredTasks(tasks)
@@ -41,6 +46,24 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
   const handleModalClose = () => {
     setIsModalOpen(false)
     setEditingTask(null)
+  }
+
+  const handleDeleteClick = (task: Task) => {
+    setTaskToDelete(task)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (taskToDelete) {
+      onTaskDelete(taskToDelete.id)
+      setIsDeleteDialogOpen(false)
+      setTaskToDelete(null)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false)
+    setTaskToDelete(null)
   }
 
   const handleTaskSave = async (taskData: CreateTaskData) => {
@@ -229,7 +252,7 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onTaskDelete(task.id)}
+                      onClick={() => handleDeleteClick(task)}
                       className="p-1"
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
@@ -252,6 +275,13 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
       <AdminDropdownManager
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        task={taskToDelete}
       />
     </div>
   )

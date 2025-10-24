@@ -2,19 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { UpdateTaskData } from '@/types/task'
 
-export async function PUT(request: NextRequest) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
     const body: UpdateTaskData = await request.json()
+    const { id } = await params
 
-    if (!body.id) {
+    if (!id) {
       return NextResponse.json(
         { error: 'Task ID is required' },
         { status: 400 }
       )
     }
 
-    const { id, ...updateData } = body
+    const { id: bodyId, ...updateData } = body
 
     const { data: task, error } = await supabase
       .from('tasks')
@@ -33,11 +34,10 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
+    const { id } = await params
 
     if (!id) {
       return NextResponse.json(

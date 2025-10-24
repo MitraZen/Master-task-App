@@ -119,6 +119,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Grant execute permission on the function
+GRANT EXECUTE ON FUNCTION get_next_task_no(TEXT) TO anon, authenticated;
+
+-- Grant usage on sequences
+GRANT USAGE ON SEQUENCE tasks_task_no_default_seq TO anon, authenticated;
+GRANT USAGE ON SEQUENCE tasks_task_no_proj_a_seq TO anon, authenticated;
+GRANT USAGE ON SEQUENCE tasks_task_no_proj_b_seq TO anon, authenticated;
+GRANT USAGE ON SEQUENCE tasks_task_no_proj_c_seq TO anon, authenticated;
+GRANT USAGE ON SEQUENCE tasks_task_no_maint_seq TO anon, authenticated;
+GRANT USAGE ON SEQUENCE tasks_task_no_r_d_seq TO anon, authenticated;
+
 -- Add missing columns to existing tasks table
 DO $$ 
 BEGIN

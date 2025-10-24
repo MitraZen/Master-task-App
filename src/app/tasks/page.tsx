@@ -1,17 +1,16 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Task, CreateTaskData } from '@/types/task'
 import { TaskTable } from '@/components/task-table'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Database, LogOut } from 'lucide-react'
+import { RefreshCw, Database, LogOut, Archive } from 'lucide-react'
 import { PageLoading } from '@/components/loading'
 import { showToast } from '@/components/toast'
 import { getDatabaseStatus } from '@/lib/env'
 import { LocalStorageManager, SyncManager } from '@/lib/persistence'
 import ProtectedRoute from '@/components/protected-route'
 import { useAuth } from '@/contexts/auth-context'
-import { UndoDelete } from '@/components/undo-delete'
 
 function TasksPageContent() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -20,10 +19,7 @@ function TasksPageContent() {
   const { logout, username } = useAuth()
   
   // Deletion state
-  const [deletedTask, setDeletedTask] = useState<Task | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const pendingDeletions = useRef<Map<string, NodeJS.Timeout>>(new Map())
-  const pendingDeletionIds = useRef<Set<string>>(new Set())
 
   const fetchTasks = async () => {
     try {
@@ -147,82 +143,38 @@ function TasksPageContent() {
     setIsDeleting(true)
     
     try {
-      // Remove from local state immediately for better UX
+      // Archive the task instead of deleting it
+      const response = await fetch('/api/archive', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ taskId: id }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || 'Failed to archive task'
+        console.error(`Archive failed: ${errorMessage}`)
+        showToast.error(`Database error: ${errorMessage}`)
+        return
+      }
+
+      // Remove from local state
       setTasks(prev => prev.filter(t => t.id !== id))
-      
-      // Show undo option immediately (don't delete from database yet)
-      setDeletedTask(taskToDelete)
-      showToast.success(`Task ${taskToDelete.project}-${taskToDelete.task_no.toString().padStart(3, '0')} deleted successfully`)
       
       // Save updated tasks to local storage
       const updatedTasks = tasks.filter(t => t.id !== id)
       LocalStorageManager.saveTasks(updatedTasks)
       
-      // Schedule database deletion after 10 seconds
-      const timeoutId = setTimeout(async () => {
-        // Check if this task is still pending deletion (not undone)
-        if (pendingDeletionIds.current.has(id)) {
-          try {
-            console.log(`Deleting task ${id} from database after timeout`)
-            const response = await fetch(`/api/tasks/${id}`, {
-              method: 'DELETE',
-            })
-            
-            if (!response.ok) {
-              console.error(`Failed to delete task ${id} from database after timeout`)
-              // If database deletion fails, restore the task
-              setTasks(prev => [...prev, taskToDelete])
-              LocalStorageManager.saveTasks([...tasks, taskToDelete])
-            } else {
-              console.log(`Task ${id} successfully deleted from database after timeout`)
-            }
-          } catch (error) {
-            console.error(`Network error during delayed deletion:`, error)
-            // If network error, restore the task
-            setTasks(prev => [...prev, taskToDelete])
-            LocalStorageManager.saveTasks([...tasks, taskToDelete])
-          }
-        }
-        // Clean up the timeout reference and pending deletion
-        pendingDeletions.current.delete(id)
-        pendingDeletionIds.current.delete(id)
-      }, 10000) // 10 seconds
-      
-      // Store the timeout reference and mark as pending deletion
-      pendingDeletions.current.set(id, timeoutId)
-      pendingDeletionIds.current.add(id)
+      showToast.success(`Task ${taskToDelete.project}-${taskToDelete.task_no.toString().padStart(3, '0')} moved to archive`)
       
     } catch (err) {
-      console.error('Error during deletion:', err)
-      // Restore task to local state if there's an error
-      setTasks(prev => [...prev, taskToDelete])
-      showToast.error('Error deleting task')
+      console.error('Error during archiving:', err)
+      showToast.error('Network error. Task archived locally but may not be synced.')
     } finally {
       setIsDeleting(false)
     }
-  }
-
-  const undoDelete = (task: Task) => {
-    // Cancel the pending database deletion
-    const timeoutId = pendingDeletions.current.get(task.id)
-    if (timeoutId) {
-      clearTimeout(timeoutId)
-      pendingDeletions.current.delete(task.id)
-      pendingDeletionIds.current.delete(task.id)
-    }
-    
-    // Restore the task to the tasks list
-    setTasks(prev => {
-      const updatedTasks = [...prev, task]
-      // Save updated tasks to localStorage
-      LocalStorageManager.saveTasks(updatedTasks)
-      return updatedTasks
-    })
-    setDeletedTask(null)
-  }
-
-  const dismissUndo = () => {
-    setDeletedTask(null)
   }
 
   useEffect(() => {
@@ -270,14 +222,24 @@ function TasksPageContent() {
             <h1 className="text-2xl font-bold text-gray-900">Welcome, {username}!</h1>
             <p className="text-gray-600">Manage your tasks efficiently</p>
           </div>
-          <Button
-            onClick={logout}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => window.location.href = '/archive'}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Archive className="h-4 w-4" />
+              Archive
+            </Button>
+            <Button
+              onClick={logout}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         <TaskTable
@@ -297,12 +259,6 @@ function TasksPageContent() {
           </div>
         )}
         
-        {/* Undo delete notification */}
-        <UndoDelete
-          deletedTask={deletedTask}
-          onUndo={undoDelete}
-          onDismiss={dismissUndo}
-        />
       </div>
     </div>
   )

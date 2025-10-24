@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('tasks')
       .select('*')
+      .eq('is_archived', false) // Only show non-archived tasks by default
 
     // Apply filters
     if (priority) {

@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, Trash2 } from 'lucide-react'
+import { AlertTriangle, Archive } from 'lucide-react'
 import { Task } from '@/types/task'
 
 interface DeleteConfirmationDialogProps {
@@ -39,10 +39,10 @@ export function DeleteConfirmationDialog({
             </div>
             <div>
               <DialogTitle className="text-lg font-semibold text-gray-900">
-                Delete Task
+                Archive Task
               </DialogTitle>
               <DialogDescription className="text-gray-600">
-                This action cannot be undone
+                This task will be moved to the archive
               </DialogDescription>
             </div>
           </div>
@@ -63,12 +63,12 @@ export function DeleteConfirmationDialog({
             </div>
           </div>
           
-          <div className="mt-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3">
+          <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-3">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-yellow-800">
-                <p className="font-medium">Warning:</p>
-                <p>This will permanently delete the task and all its data. You can undo this action within 10 seconds after deletion.</p>
+              <Archive className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium">Archive Information:</p>
+                <p>This task will be moved to the archive where you can restore it later or permanently delete it from the Archive page.</p>
               </div>
             </div>
           </div>
@@ -92,12 +92,12 @@ export function DeleteConfirmationDialog({
             {isDeleting ? (
               <>
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Deleting...
+                Archiving...
               </>
             ) : (
               <>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Task
+                <Archive className="mr-2 h-4 w-4" />
+                Archive Task
               </>
             )}
           </Button>

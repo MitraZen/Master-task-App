@@ -1,4 +1,5 @@
 -- Updated schema for Master Task Tracker with new columns and admin functionality
+-- Archive functionality added for safer deletion
 
 -- Create dropdown_options table for admin management
 CREATE TABLE IF NOT EXISTS dropdown_options (
@@ -31,6 +32,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   percent_complete NUMERIC(5,2) DEFAULT 0 CHECK (percent_complete >= 0 AND percent_complete <= 100),
   done BOOLEAN DEFAULT FALSE,
   notes TEXT,
+  is_archived BOOLEAN DEFAULT FALSE, -- New: Archive flag for soft deletion
+  archived_at TIMESTAMP WITH TIME ZONE, -- New: When task was archived
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(project, task_no) -- Ensure unique task numbers per project
@@ -210,6 +213,28 @@ BEGIN
         AND column_name = 'sort_order'
     ) THEN
         ALTER TABLE task_fields_config ADD COLUMN sort_order INTEGER DEFAULT 0;
+    END IF;
+END $$;
+
+-- Add archive columns to existing tasks table
+DO $$ 
+BEGIN
+    -- Add is_archived column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'tasks' 
+        AND column_name = 'is_archived'
+    ) THEN
+        ALTER TABLE tasks ADD COLUMN is_archived BOOLEAN DEFAULT FALSE;
+    END IF;
+    
+    -- Add archived_at column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'tasks' 
+        AND column_name = 'archived_at'
+    ) THEN
+        ALTER TABLE tasks ADD COLUMN archived_at TIMESTAMP WITH TIME ZONE;
     END IF;
 END $$;
 

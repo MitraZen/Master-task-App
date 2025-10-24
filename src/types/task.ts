@@ -15,6 +15,8 @@ export interface Task {
   percent_complete: number
   done: boolean
   notes?: string
+  is_archived: boolean
+  archived_at?: string
   created_at: string
   updated_at: string
 }

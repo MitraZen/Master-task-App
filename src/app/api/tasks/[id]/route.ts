@@ -6,10 +6,20 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
   try {
     const supabase = await createClient()
     const body: UpdateTaskData = await request.json()
-    const params = await context.params
-    const { id } = params
+    
+    // Handle both sync and async params for compatibility
+    let id: string
+    try {
+      const params = await context.params
+      id = params.id
+    } catch (error) {
+      // Fallback: extract ID from URL
+      const url = new URL(request.url)
+      const pathParts = url.pathname.split('/')
+      id = pathParts[pathParts.length - 1]
+    }
 
-    if (!id) {
+    if (!id || id === 'undefined' || id === 'null') {
       return NextResponse.json(
         { error: 'Task ID is required' },
         { status: 400 }
@@ -41,14 +51,26 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     console.log('Request URL:', request.url)
     
     const supabase = await createClient()
-    const params = await context.params
-    console.log('Resolved params:', params)
     
-    const { id } = params
-    console.log('Extracted ID:', id)
+    // Handle both sync and async params for compatibility
+    let id: string
+    try {
+      const params = await context.params
+      id = params.id
+      console.log('Resolved params:', params)
+    } catch (error) {
+      console.log('Async params failed, trying sync approach')
+      // Fallback: extract ID from URL
+      const url = new URL(request.url)
+      const pathParts = url.pathname.split('/')
+      id = pathParts[pathParts.length - 1]
+      console.log('Extracted ID from URL:', id)
+    }
+    
+    console.log('Final ID:', id)
 
-    if (!id) {
-      console.error('No ID found in params')
+    if (!id || id === 'undefined' || id === 'null') {
+      console.error('No valid ID found')
       return NextResponse.json(
         { error: 'Task ID is required' },
         { status: 400 }

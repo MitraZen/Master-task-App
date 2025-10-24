@@ -145,37 +145,59 @@ function TasksPageContent() {
       // Remove from local state immediately for better UX
       setTasks(prev => prev.filter(t => t.id !== id))
       
-      // Try to delete from database
+      // Try to delete from database with timeout
       console.log(`Attempting to delete task ${id} from database`)
-      const response = await fetch(`/api/tasks/${id}`, {
-        method: 'DELETE',
-      })
-
-      console.log(`Delete response status: ${response.status}`)
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMessage = errorData.error || 'Failed to delete task from database'
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      
+      try {
+        const response = await fetch(`/api/tasks/${id}`, {
+          method: 'DELETE',
+          signal: controller.signal,
+        })
+
+        clearTimeout(timeoutId)
+        console.log(`Delete response status: ${response.status}`)
         
-        console.error(`Database deletion failed: ${errorMessage}`)
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          const errorMessage = errorData.error || 'Failed to delete task from database'
+          
+          console.error(`Database deletion failed: ${errorMessage}`)
+          
+          // Restore task to local state if database deletion failed
+          setTasks(prev => [...prev, taskToDelete])
+          
+          showToast.error(`Database error: ${errorMessage}`)
+          return
+        }
+
+        const responseData = await response.json()
+        console.log(`Delete successful:`, responseData)
         
-        // Restore task to local state if database deletion failed
+        // Success - show undo option
+        setDeletedTask({ task: taskToDelete, timestamp: Date.now() })
+        showToast.success(`Task ${taskToDelete.project}-${taskToDelete.task_no.toString().padStart(3, '0')} deleted successfully`)
+        
+        // Save updated tasks to local storage
+        const updatedTasks = tasks.filter(t => t.id !== id)
+        LocalStorageManager.saveTasks(updatedTasks)
+        
+      } catch (error) {
+        clearTimeout(timeoutId)
+        console.error(`Network error during deletion:`, error)
+        
+        // Restore task to local state if network error
         setTasks(prev => [...prev, taskToDelete])
         
-        showToast.error(`Database error: ${errorMessage}`)
+        if (error.name === 'AbortError') {
+          showToast.error('Request timed out. Task deleted locally but may not be synced.')
+        } else {
+          showToast.error('Network error. Task deleted locally but may not be synced.')
+        }
         return
       }
-
-      const responseData = await response.json()
-      console.log(`Delete successful:`, responseData)
-
-      // Success - show undo option
-      setDeletedTask(taskToDelete)
-      showToast.success('Task deleted successfully')
-      
-      // Save updated tasks to localStorage (use the original tasks without the deleted one)
-      const updatedTasks = currentTasks.filter(t => t.id !== id)
-      LocalStorageManager.saveTasks(updatedTasks)
       
     } catch (err) {
       // Network error - restore task to local state

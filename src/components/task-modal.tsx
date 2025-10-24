@@ -212,19 +212,19 @@ export function TaskModal({ isOpen, onClose, onSave, onSaveMultiple, task }: Tas
       const taskStartDate = new Date(currentDate)
       const taskDueDate = new Date(currentDate)
       
-      // Set due date based on frequency
+      // Set due date based on frequency using the specified day additions
       switch (formData.frequency) {
         case 'Daily':
-          taskDueDate.setDate(taskDueDate.getDate() + 1)
+          taskDueDate.setDate(taskDueDate.getDate() + 1) // Start Date + 1 day
           break
         case 'Weekly':
-          taskDueDate.setDate(taskDueDate.getDate() + 7)
+          taskDueDate.setDate(taskDueDate.getDate() + 5) // Start Date + 5 days
           break
         case 'Monthly':
-          taskDueDate.setMonth(taskDueDate.getMonth() + 1)
+          taskDueDate.setDate(taskDueDate.getDate() + 7) // Start Date + 7 days
           break
         case 'Yearly':
-          taskDueDate.setFullYear(taskDueDate.getFullYear() + 1)
+          taskDueDate.setDate(taskDueDate.getDate() + 15) // Start Date + 15 days
           break
       }
 
@@ -439,6 +439,13 @@ export function TaskModal({ isOpen, onClose, onSave, onSaveMultiple, task }: Tas
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
                           Each task will have the same details but different dates based on {formData.frequency} frequency.
+                          <br />
+                          Due dates will be calculated as: Start Date + {
+                            formData.frequency === 'Daily' ? '1' :
+                            formData.frequency === 'Weekly' ? '5' :
+                            formData.frequency === 'Monthly' ? '7' :
+                            formData.frequency === 'Yearly' ? '15' : '1'
+                          } day(s)
                         </p>
                       </div>
                     </div>
@@ -517,24 +524,38 @@ export function TaskModal({ isOpen, onClose, onSave, onSaveMultiple, task }: Tas
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="start_date">Start Date *</Label>
+              <Label htmlFor="start_date">
+                Start Date * 
+                {recurringData.is_recurring && isRecurringFrequency(formData.frequency) && (
+                  <span className="text-xs text-gray-500 ml-2">(Disabled for recurring tasks)</span>
+                )}
+              </Label>
               <Input
                 id="start_date"
                 type="date"
                 value={formData.start_date}
                 onChange={(e) => handleInputChange('start_date', e.target.value)}
                 required
+                disabled={recurringData.is_recurring && isRecurringFrequency(formData.frequency)}
+                className={recurringData.is_recurring && isRecurringFrequency(formData.frequency) ? "bg-gray-100 text-gray-500" : ""}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="due_date">Due Date *</Label>
+              <Label htmlFor="due_date">
+                Due Date * 
+                {recurringData.is_recurring && isRecurringFrequency(formData.frequency) && (
+                  <span className="text-xs text-gray-500 ml-2">(Auto-calculated for recurring tasks)</span>
+                )}
+              </Label>
               <Input
                 id="due_date"
                 type="date"
                 value={formData.due_date}
                 onChange={(e) => handleInputChange('due_date', e.target.value)}
                 required
+                disabled={recurringData.is_recurring && isRecurringFrequency(formData.frequency)}
+                className={recurringData.is_recurring && isRecurringFrequency(formData.frequency) ? "bg-gray-100 text-gray-500" : ""}
               />
             </div>
 

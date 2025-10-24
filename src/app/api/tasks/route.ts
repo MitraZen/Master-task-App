@@ -11,6 +11,9 @@ export async function GET(request: NextRequest) {
     const priority = searchParams.get('priority')
     const status = searchParams.get('status')
     const frequency = searchParams.get('frequency')
+    const stageGates = searchParams.get('stage_gates')
+    const taskType = searchParams.get('task_type')
+    const assignedTo = searchParams.get('assigned_to')
     const sortBy = searchParams.get('sortBy') || 'due_date'
     const sortOrder = searchParams.get('sortOrder') || 'asc'
 
@@ -27,6 +30,15 @@ export async function GET(request: NextRequest) {
     }
     if (frequency) {
       query = query.eq('frequency', frequency)
+    }
+    if (stageGates) {
+      query = query.eq('stage_gates', stageGates)
+    }
+    if (taskType) {
+      query = query.eq('task_type', taskType)
+    }
+    if (assignedTo) {
+      query = query.eq('assigned_to', assignedTo)
     }
 
     // Apply sorting
@@ -50,7 +62,7 @@ export async function POST(request: NextRequest) {
     const body: CreateTaskData = await request.json()
 
     // Validate required fields
-    if (!body.task_name || !body.start_date || !body.due_date) {
+    if (!body.task_description || !body.start_date || !body.due_date) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }

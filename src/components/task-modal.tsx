@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Task } from '@/types/task'
+import { Task, CreateTaskData, DropdownOption } from '@/types/task'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,30 +13,126 @@ import { Checkbox } from '@/components/ui/checkbox'
 interface TaskModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (task: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => void
+  onSave: (task: CreateTaskData) => void
   task?: Task | null
 }
 
 export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
   const [formData, setFormData] = useState({
-    task_name: '',
-    frequency: 'Daily' as Task['frequency'],
-    priority: 'Medium' as Task['priority'],
+    stage_gates: 'SG1',
+    task_type: 'Initiation',
+    frequency: 'Daily',
+    priority: 'Medium',
+    task_description: '',
+    assigned_to: '',
     start_date: '',
     due_date: '',
     est_hours: 0,
-    status: 'Not Started' as Task['status'],
+    status: 'Not Started',
     percent_complete: 0,
     done: false,
     notes: ''
   })
 
+  const [assignedToOptions, setAssignedToOptions] = useState<DropdownOption[]>([])
+  const [statusOptions, setStatusOptions] = useState<DropdownOption[]>([])
+  const [stageGatesOptions, setStageGatesOptions] = useState<DropdownOption[]>([])
+  const [taskTypeOptions, setTaskTypeOptions] = useState<DropdownOption[]>([])
+  const [frequencyOptions, setFrequencyOptions] = useState<DropdownOption[]>([])
+  const [priorityOptions, setPriorityOptions] = useState<DropdownOption[]>([])
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchAssignedToOptions()
+      fetchStatusOptions()
+      fetchStageGatesOptions()
+      fetchTaskTypeOptions()
+      fetchFrequencyOptions()
+      fetchPriorityOptions()
+    }
+  }, [isOpen])
+
+  const fetchAssignedToOptions = async () => {
+    try {
+      const response = await fetch('/api/admin/dropdown-options?field_name=assigned_to')
+      if (response.ok) {
+        const data = await response.json()
+        setAssignedToOptions(data.options || [])
+      }
+    } catch (error) {
+      console.error('Error fetching assigned_to options:', error)
+    }
+  }
+
+  const fetchStatusOptions = async () => {
+    try {
+      const response = await fetch('/api/admin/dropdown-options?field_name=status')
+      if (response.ok) {
+        const data = await response.json()
+        setStatusOptions(data.options || [])
+      }
+    } catch (error) {
+      console.error('Error fetching status options:', error)
+    }
+  }
+
+  const fetchStageGatesOptions = async () => {
+    try {
+      const response = await fetch('/api/admin/dropdown-options?field_name=stage_gates')
+      if (response.ok) {
+        const data = await response.json()
+        setStageGatesOptions(data.options || [])
+      }
+    } catch (error) {
+      console.error('Error fetching stage_gates options:', error)
+    }
+  }
+
+  const fetchTaskTypeOptions = async () => {
+    try {
+      const response = await fetch('/api/admin/dropdown-options?field_name=task_type')
+      if (response.ok) {
+        const data = await response.json()
+        setTaskTypeOptions(data.options || [])
+      }
+    } catch (error) {
+      console.error('Error fetching task_type options:', error)
+    }
+  }
+
+  const fetchFrequencyOptions = async () => {
+    try {
+      const response = await fetch('/api/admin/dropdown-options?field_name=frequency')
+      if (response.ok) {
+        const data = await response.json()
+        setFrequencyOptions(data.options || [])
+      }
+    } catch (error) {
+      console.error('Error fetching frequency options:', error)
+    }
+  }
+
+  const fetchPriorityOptions = async () => {
+    try {
+      const response = await fetch('/api/admin/dropdown-options?field_name=priority')
+      if (response.ok) {
+        const data = await response.json()
+        setPriorityOptions(data.options || [])
+      }
+    } catch (error) {
+      console.error('Error fetching priority options:', error)
+    }
+  }
+
   useEffect(() => {
     if (task) {
       setFormData({
-        task_name: task.task_name,
+        stage_gates: task.stage_gates,
+        task_type: task.task_type,
         frequency: task.frequency,
         priority: task.priority,
+        task_description: task.task_description,
+        assigned_to: task.assigned_to || '',
         start_date: task.start_date,
         due_date: task.due_date,
         est_hours: task.est_hours,
@@ -47,9 +143,12 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
       })
     } else {
       setFormData({
-        task_name: '',
+        stage_gates: 'SG1',
+        task_type: 'Initiation',
         frequency: 'Daily',
         priority: 'Medium',
+        task_description: '',
+        assigned_to: '',
         start_date: '',
         due_date: '',
         est_hours: 0,
@@ -85,14 +184,41 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="task_name">Task Name *</Label>
-              <Input
-                id="task_name"
-                value={formData.task_name}
-                onChange={(e) => handleInputChange('task_name', e.target.value)}
-                required
-                placeholder="Enter task name"
-              />
+              <Label htmlFor="stage_gates">Stage Gates</Label>
+              <Select
+                value={formData.stage_gates}
+                onValueChange={(value) => handleInputChange('stage_gates', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {stageGatesOptions.map(option => (
+                    <SelectItem key={option.option_value} value={option.option_value}>
+                      {option.option_label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="task_type">Task Type</Label>
+              <Select
+                value={formData.task_type}
+                onValueChange={(value) => handleInputChange('task_type', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskTypeOptions.map(option => (
+                    <SelectItem key={option.option_value} value={option.option_value}>
+                      {option.option_label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -105,11 +231,11 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Daily">Daily</SelectItem>
-                  <SelectItem value="Weekly">Weekly</SelectItem>
-                  <SelectItem value="Monthly">Monthly</SelectItem>
-                  <SelectItem value="Yearly">Yearly</SelectItem>
-                  <SelectItem value="Adhoc">Adhoc</SelectItem>
+                  {frequencyOptions.map(option => (
+                    <SelectItem key={option.option_value} value={option.option_value}>
+                      {option.option_label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -124,9 +250,42 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="Low">Low</SelectItem>
+                  {priorityOptions.map(option => (
+                    <SelectItem key={option.option_value} value={option.option_value}>
+                      {option.option_label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="task_description">Task Description *</Label>
+              <Input
+                id="task_description"
+                value={formData.task_description}
+                onChange={(e) => handleInputChange('task_description', e.target.value)}
+                required
+                placeholder="Enter task description"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assigned_to">Assigned To</Label>
+              <Select
+                value={formData.assigned_to}
+                onValueChange={(value) => handleInputChange('assigned_to', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {assignedToOptions.map(option => (
+                    <SelectItem key={option.option_value} value={option.option_value}>
+                      {option.option_label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -141,10 +300,11 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Not Started">Not Started</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Complete">Complete</SelectItem>
-                  <SelectItem value="Overdue">Overdue</SelectItem>
+                  {statusOptions.map(option => (
+                    <SelectItem key={option.option_value} value={option.option_value}>
+                      {option.option_label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

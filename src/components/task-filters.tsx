@@ -17,6 +17,9 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
     priority: 'all',
     status: 'all',
     frequency: 'all',
+    stage_gates: 'all',
+    task_type: 'all',
+    assigned_to: 'all',
     search: ''
   })
 
@@ -38,7 +41,8 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
     // Apply search filter
     if (currentFilters.search) {
       filtered = filtered.filter(task =>
-        task.task_name.toLowerCase().includes(currentFilters.search.toLowerCase()) ||
+        task.task_description.toLowerCase().includes(currentFilters.search.toLowerCase()) ||
+        (task.assigned_to && task.assigned_to.toLowerCase().includes(currentFilters.search.toLowerCase())) ||
         (task.notes && task.notes.toLowerCase().includes(currentFilters.search.toLowerCase()))
       )
     }
@@ -58,6 +62,21 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
       filtered = filtered.filter(task => task.frequency === currentFilters.frequency)
     }
 
+    // Apply stage gates filter
+    if (currentFilters.stage_gates && currentFilters.stage_gates !== 'all') {
+      filtered = filtered.filter(task => task.stage_gates === currentFilters.stage_gates)
+    }
+
+    // Apply task type filter
+    if (currentFilters.task_type && currentFilters.task_type !== 'all') {
+      filtered = filtered.filter(task => task.task_type === currentFilters.task_type)
+    }
+
+    // Apply assigned to filter
+    if (currentFilters.assigned_to && currentFilters.assigned_to !== 'all') {
+      filtered = filtered.filter(task => task.assigned_to === currentFilters.assigned_to)
+    }
+
     onFilter(filtered)
   }
 
@@ -66,6 +85,9 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
       priority: 'all',
       status: 'all',
       frequency: 'all',
+      stage_gates: 'all',
+      task_type: 'all',
+      assigned_to: 'all',
       search: ''
     }
     setFilters(clearedFilters)
@@ -80,6 +102,9 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
   const priorities = [...new Set(tasks.map(task => task.priority))]
   const statuses = [...new Set(tasks.map(task => task.status))]
   const frequencies = [...new Set(tasks.map(task => task.frequency))]
+  const stageGates = [...new Set(tasks.map(task => task.stage_gates))]
+  const taskTypes = [...new Set(tasks.map(task => task.task_type))]
+  const assignedTo = [...new Set(tasks.map(task => task.assigned_to).filter(Boolean))] as string[]
 
   return (
     <div className="bg-gray-50 p-4 rounded-lg space-y-4">
@@ -99,7 +124,7 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Search</label>
           <Input
@@ -107,6 +132,46 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
           />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Stage Gates</label>
+          <Select
+            value={filters.stage_gates}
+            onValueChange={(value) => handleFilterChange('stage_gates', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Stage Gates" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Stage Gates</SelectItem>
+              {stageGates.map(stageGate => (
+                <SelectItem key={stageGate} value={stageGate}>
+                  {stageGate}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Task Type</label>
+          <Select
+            value={filters.task_type}
+            onValueChange={(value) => handleFilterChange('task_type', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Task Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Task Types</SelectItem>
+              {taskTypes.map(taskType => (
+                <SelectItem key={taskType} value={taskType}>
+                  {taskType}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
@@ -170,6 +235,26 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
         </div>
 
         <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Assigned To</label>
+          <Select
+            value={filters.assigned_to}
+            onValueChange={(value) => handleFilterChange('assigned_to', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Assignees" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Assignees</SelectItem>
+              {assignedTo.map(assignee => (
+                <SelectItem key={assignee} value={assignee}>
+                  {assignee}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Sort By</label>
           <Select
             onValueChange={(value) => {
@@ -184,7 +269,8 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
               <SelectItem value="due_date">Due Date</SelectItem>
               <SelectItem value="start_date">Start Date</SelectItem>
               <SelectItem value="priority">Priority</SelectItem>
-              <SelectItem value="task_name">Task Name</SelectItem>
+              <SelectItem value="task_description">Task Description</SelectItem>
+              <SelectItem value="task_no">Task Number</SelectItem>
             </SelectContent>
           </Select>
         </div>

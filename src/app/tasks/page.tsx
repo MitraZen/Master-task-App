@@ -1,19 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Task } from '@/types/task'
+import { Task, CreateTaskData } from '@/types/task'
 import { TaskTable } from '@/components/task-table'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Database } from 'lucide-react'
+import { RefreshCw, Database, LogOut } from 'lucide-react'
 import { PageLoading } from '@/components/loading'
 import { showToast } from '@/components/toast'
 import { getDatabaseStatus } from '@/lib/env'
 import { LocalStorageManager, SyncManager } from '@/lib/persistence'
+import ProtectedRoute from '@/components/protected-route'
+import { useAuth } from '@/contexts/auth-context'
 
-export default function TasksPage() {
+function TasksPageContent() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { logout, username } = useAuth()
 
   const fetchTasks = async () => {
     try {
@@ -48,15 +51,16 @@ export default function TasksPage() {
     }
   }
 
-  const createTask = async (taskData: Omit<Task, 'id' | 'created_at' | 'updated_at'>) => {
+  const createTask = async (taskData: CreateTaskData) => {
     const toastId = showToast.loading('Creating task...')
     
     try {
       // Generate a temporary ID for local state
       const tempId = `temp-${Date.now()}`
-      const tempTask = {
+      const tempTask: Task = {
         ...taskData,
         id: tempId,
+        task_no: tasks.length + 1, // Temporary task number
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -182,6 +186,22 @@ export default function TasksPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
+        {/* Header with logout button */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Welcome, {username}!</h1>
+            <p className="text-gray-600">Manage your tasks efficiently</p>
+          </div>
+          <Button
+            onClick={logout}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
+
         <TaskTable
           tasks={tasks}
           onTaskCreate={createTask}
@@ -200,5 +220,13 @@ export default function TasksPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function TasksPage() {
+  return (
+    <ProtectedRoute>
+      <TasksPageContent />
+    </ProtectedRoute>
   )
 }

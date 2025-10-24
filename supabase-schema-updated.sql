@@ -122,13 +122,25 @@ $$ LANGUAGE plpgsql;
 -- Grant execute permission on the function
 GRANT EXECUTE ON FUNCTION get_next_task_no(TEXT) TO anon, authenticated;
 
--- Grant usage on sequences
-GRANT USAGE ON SEQUENCE tasks_task_no_default_seq TO anon, authenticated;
-GRANT USAGE ON SEQUENCE tasks_task_no_proj_a_seq TO anon, authenticated;
-GRANT USAGE ON SEQUENCE tasks_task_no_proj_b_seq TO anon, authenticated;
-GRANT USAGE ON SEQUENCE tasks_task_no_proj_c_seq TO anon, authenticated;
-GRANT USAGE ON SEQUENCE tasks_task_no_maint_seq TO anon, authenticated;
-GRANT USAGE ON SEQUENCE tasks_task_no_r_d_seq TO anon, authenticated;
+-- Grant usage on all task number sequences dynamically
+DO $$ 
+DECLARE
+    seq_name TEXT;
+    project_names TEXT[] := ARRAY['DEFAULT', 'PROJ-A', 'PROJ-B', 'PROJ-C', 'MAINT', 'R&D'];
+    project_name TEXT;
+BEGIN
+    FOREACH project_name IN ARRAY project_names
+    LOOP
+        seq_name := 'tasks_task_no_' || lower(replace(replace(project_name, '-', '_'), '&', 'and')) || '_seq';
+        BEGIN
+            EXECUTE format('GRANT USAGE ON SEQUENCE %I TO anon, authenticated', seq_name);
+        EXCEPTION
+            WHEN undefined_table THEN
+                -- Sequence doesn't exist yet, skip
+                NULL;
+        END;
+    END LOOP;
+END $$;
 
 -- Add missing columns to existing tasks table
 DO $$ 

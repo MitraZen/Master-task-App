@@ -177,7 +177,7 @@ function TasksPageContent() {
         console.log(`Delete successful:`, responseData)
         
         // Success - show undo option
-        setDeletedTask({ task: taskToDelete, timestamp: Date.now() })
+        setDeletedTask(taskToDelete)
         showToast.success(`Task ${taskToDelete.project}-${taskToDelete.task_no.toString().padStart(3, '0')} deleted successfully`)
         
         // Save updated tasks to local storage

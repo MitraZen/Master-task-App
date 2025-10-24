@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Task, CreateTaskData } from '@/types/task'
 import { TaskTable } from '@/components/task-table'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,8 @@ function TasksPageContent() {
   // Deletion state
   const [deletedTask, setDeletedTask] = useState<Task | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const pendingDeletions = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const pendingDeletionIds = useRef<Set<string>>(new Set())
 
   const fetchTasks = async () => {
     try {
@@ -144,79 +146,71 @@ function TasksPageContent() {
 
     setIsDeleting(true)
     
-    // Store the current tasks for localStorage update
-    const currentTasks = tasks
-    
     try {
       // Remove from local state immediately for better UX
       setTasks(prev => prev.filter(t => t.id !== id))
       
-      // Try to delete from database with timeout
-      console.log(`Attempting to delete task ${id} from database`)
+      // Show undo option immediately (don't delete from database yet)
+      setDeletedTask(taskToDelete)
+      showToast.success(`Task ${taskToDelete.project}-${taskToDelete.task_no.toString().padStart(3, '0')} deleted successfully`)
       
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      // Save updated tasks to local storage
+      const updatedTasks = tasks.filter(t => t.id !== id)
+      LocalStorageManager.saveTasks(updatedTasks)
       
-      try {
-        const response = await fetch(`/api/tasks/${id}`, {
-          method: 'DELETE',
-          signal: controller.signal,
-        })
-
-        clearTimeout(timeoutId)
-        console.log(`Delete response status: ${response.status}`)
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          const errorMessage = errorData.error || 'Failed to delete task from database'
-          
-          console.error(`Database deletion failed: ${errorMessage}`)
-          
-          // Restore task to local state if database deletion failed
-          setTasks(prev => [...prev, taskToDelete])
-          
-          showToast.error(`Database error: ${errorMessage}`)
-          return
+      // Schedule database deletion after 10 seconds
+      const timeoutId = setTimeout(async () => {
+        // Check if this task is still pending deletion (not undone)
+        if (pendingDeletionIds.current.has(id)) {
+          try {
+            console.log(`Deleting task ${id} from database after timeout`)
+            const response = await fetch(`/api/tasks/${id}`, {
+              method: 'DELETE',
+            })
+            
+            if (!response.ok) {
+              console.error(`Failed to delete task ${id} from database after timeout`)
+              // If database deletion fails, restore the task
+              setTasks(prev => [...prev, taskToDelete])
+              LocalStorageManager.saveTasks([...tasks, taskToDelete])
+            } else {
+              console.log(`Task ${id} successfully deleted from database after timeout`)
+            }
+          } catch (error) {
+            console.error(`Network error during delayed deletion:`, error)
+            // If network error, restore the task
+            setTasks(prev => [...prev, taskToDelete])
+            LocalStorageManager.saveTasks([...tasks, taskToDelete])
+          }
         }
-
-        const responseData = await response.json()
-        console.log(`Delete successful:`, responseData)
-        
-        // Success - show undo option
-        setDeletedTask(taskToDelete)
-        showToast.success(`Task ${taskToDelete.project}-${taskToDelete.task_no.toString().padStart(3, '0')} deleted successfully`)
-        
-        // Save updated tasks to local storage
-        const updatedTasks = tasks.filter(t => t.id !== id)
-        LocalStorageManager.saveTasks(updatedTasks)
-        
-      } catch (error) {
-        clearTimeout(timeoutId)
-        console.error(`Network error during deletion:`, error)
-        
-        // Restore task to local state if network error
-        setTasks(prev => [...prev, taskToDelete])
-        
-        if (error instanceof Error && error.name === 'AbortError') {
-          showToast.error('Request timed out. Task deleted locally but may not be synced.')
-        } else {
-          showToast.error('Network error. Task deleted locally but may not be synced.')
-        }
-        return
-      }
+        // Clean up the timeout reference and pending deletion
+        pendingDeletions.current.delete(id)
+        pendingDeletionIds.current.delete(id)
+      }, 10000) // 10 seconds
+      
+      // Store the timeout reference and mark as pending deletion
+      pendingDeletions.current.set(id, timeoutId)
+      pendingDeletionIds.current.add(id)
       
     } catch (err) {
-      // Network error - restore task to local state
+      console.error('Error during deletion:', err)
+      // Restore task to local state if there's an error
       setTasks(prev => [...prev, taskToDelete])
-      
-      console.error('Network error during deletion:', err)
-      showToast.error('Network error: Unable to delete task. Please check your connection.')
+      showToast.error('Error deleting task')
     } finally {
       setIsDeleting(false)
     }
   }
 
   const undoDelete = (task: Task) => {
+    // Cancel the pending database deletion
+    const timeoutId = pendingDeletions.current.get(task.id)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+      pendingDeletions.current.delete(task.id)
+      pendingDeletionIds.current.delete(task.id)
+    }
+    
     // Restore the task to the tasks list
     setTasks(prev => {
       const updatedTasks = [...prev, task]

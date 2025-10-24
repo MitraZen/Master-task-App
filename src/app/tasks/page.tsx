@@ -108,7 +108,7 @@ function TasksPageContent() {
       setTasks(prev => prev.map(t => t.id === task.id ? task : t))
       
       // Try to update the database
-      const response = await fetch('/api/tasks', {
+      const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -117,18 +117,24 @@ function TasksPageContent() {
       })
 
       if (!response.ok) {
-        // If database is not available, just continue with local state
-        console.log('Database not available, using local state only')
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || 'Failed to update task'
+        console.error(`Database update failed: ${errorMessage}`)
+        showToast.error(`Database error: ${errorMessage}`)
         return
       }
 
       const data = await response.json()
       // Update with the response from server
       setTasks(prev => prev.map(t => t.id === task.id ? data.task : t))
+      
+      // Save to local storage
+      LocalStorageManager.saveTasks(tasks.map(t => t.id === task.id ? data.task : t))
+      
+      showToast.success('Task updated successfully')
     } catch (err) {
-      console.log('Database not available, using local state only')
-      // Don't show error to user, just continue with local state
-      // The task is already updated in local state above
+      console.error('Network error during update:', err)
+      showToast.error('Network error. Task updated locally but may not be synced.')
     }
   }
 

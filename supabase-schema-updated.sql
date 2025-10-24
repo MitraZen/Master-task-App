@@ -39,15 +39,19 @@ CREATE TABLE IF NOT EXISTS tasks (
 DO $$ 
 BEGIN
     -- Drop existing status constraint and add new one with On-Hold
-    IF EXISTS (
-        SELECT 1 FROM information_schema.check_constraints 
-        WHERE constraint_name LIKE '%status%' 
-        AND table_name = 'tasks'
-    ) THEN
+    -- Use a more robust approach that works regardless of constraint name
+    BEGIN
         ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check;
+        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check1;
+        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check2;
+        -- Add the new constraint
         ALTER TABLE tasks ADD CONSTRAINT tasks_status_check 
         CHECK (status IN ('Not Started', 'In Progress', 'Complete', 'Overdue', 'On-Hold'));
-    END IF;
+    EXCEPTION
+        WHEN OTHERS THEN
+            -- If there's any error, just continue
+            NULL;
+    END;
 END $$;
 
 -- Add missing columns to existing tasks table

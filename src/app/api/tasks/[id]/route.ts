@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { UpdateTaskData } from '@/types/task'
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
     const body: UpdateTaskData = await request.json()
-    const { id } = await params
+    const params = await context.params
+    const { id } = params
 
     if (!id) {
       return NextResponse.json(
@@ -34,12 +35,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    console.log('DELETE request received')
+    console.log('Request URL:', request.url)
+    
     const supabase = await createClient()
-    const { id } = await params
+    const params = await context.params
+    console.log('Resolved params:', params)
+    
+    const { id } = params
+    console.log('Extracted ID:', id)
 
     if (!id) {
+      console.error('No ID found in params')
       return NextResponse.json(
         { error: 'Task ID is required' },
         { status: 400 }

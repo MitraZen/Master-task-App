@@ -19,16 +19,16 @@ CREATE TABLE IF NOT EXISTS tasks (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   task_no INTEGER NOT NULL DEFAULT 1, -- Project-specific task number
   project TEXT NOT NULL DEFAULT 'DEFAULT', -- Project identifier
-  stage_gates TEXT NOT NULL CHECK (stage_gates IN ('SG1', 'SG2', 'SG3', 'SG4', 'SG5', 'FID', 'FDD')),
-  task_type TEXT NOT NULL CHECK (task_type IN ('Initiation', 'Requirements', 'Design', 'Development', 'Testing', 'ERS', 'S&T', 'SOM', 'Snow', 'Go_Live', 'Discovery', 'Cutover', 'AtD', 'AtO', 'KT', 'Hypercare')),
-  frequency TEXT NOT NULL CHECK (frequency IN ('Daily', 'Weekly', 'Monthly', 'Yearly', 'Adhoc')),
-  priority TEXT NOT NULL CHECK (priority IN ('High', 'Medium', 'Low')),
+  stage_gates TEXT NOT NULL,
+  task_type TEXT NOT NULL,
+  frequency TEXT NOT NULL,
+  priority TEXT NOT NULL,
   task_description TEXT NOT NULL, -- Renamed from task_name
   assigned_to TEXT,
   start_date DATE NOT NULL,
   due_date DATE NOT NULL,
   est_hours NUMERIC(10,2) DEFAULT 0, -- Deprecated: kept for compatibility, ETR is now calculated from due_date
-  status TEXT NOT NULL DEFAULT 'Not Started' CHECK (status IN ('Not Started', 'In Progress', 'Complete', 'Overdue', 'On-Hold')),
+  status TEXT NOT NULL DEFAULT 'Not Started',
   done BOOLEAN DEFAULT FALSE,
   notes TEXT,
   is_archived BOOLEAN DEFAULT FALSE, -- New: Archive flag for soft deletion
@@ -38,21 +38,33 @@ CREATE TABLE IF NOT EXISTS tasks (
   UNIQUE(project, task_no) -- Ensure unique task numbers per project
 );
 
--- Update existing CHECK constraint to include On-Hold status
+-- Update existing CHECK constraints to allow dynamic values from admin dropdowns
 DO $$ 
 BEGIN
-    -- Drop existing status constraint and add new one with On-Hold
-    -- Use a more robust approach that works regardless of constraint name
+    -- Drop all hardcoded CHECK constraints to allow dynamic values
     BEGIN
         ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check;
         ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check1;
         ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check2;
-        -- Add the new constraint
+        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_frequency_check;
+        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_priority_check;
+        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_stage_gates_check;
+        ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_task_type_check;
+        
+        -- Add flexible constraints that only check for non-empty values
         ALTER TABLE tasks ADD CONSTRAINT tasks_status_check 
-        CHECK (status IN ('Not Started', 'In Progress', 'Complete', 'Overdue', 'On-Hold'));
+            CHECK (status IS NOT NULL AND status != '');
+        ALTER TABLE tasks ADD CONSTRAINT tasks_frequency_check 
+            CHECK (frequency IS NOT NULL AND frequency != '');
+        ALTER TABLE tasks ADD CONSTRAINT tasks_priority_check 
+            CHECK (priority IS NOT NULL AND priority != '');
+        ALTER TABLE tasks ADD CONSTRAINT tasks_stage_gates_check 
+            CHECK (stage_gates IS NOT NULL AND stage_gates != '');
+        ALTER TABLE tasks ADD CONSTRAINT tasks_task_type_check 
+            CHECK (task_type IS NOT NULL AND task_type != '');
     EXCEPTION
         WHEN OTHERS THEN
-            -- If there's any error, just continue
+            -- If constraints don't exist, just continue
             NULL;
     END;
 END $$;

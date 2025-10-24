@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Undo2, X } from 'lucide-react'
 import { Task } from '@/types/task'
@@ -14,15 +14,24 @@ interface UndoDeleteProps {
 
 export function UndoDelete({ deletedTask, onUndo, onDismiss }: UndoDeleteProps) {
   const [timeLeft, setTimeLeft] = useState(10)
+  const onDismissRef = useRef(onDismiss)
+
+  // Update the ref when onDismiss changes
+  useEffect(() => {
+    onDismissRef.current = onDismiss
+  }, [onDismiss])
 
   useEffect(() => {
     if (!deletedTask) return
+
+    // Reset timer when a new task is deleted
+    setTimeLeft(10)
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer)
-          onDismiss()
+          onDismissRef.current()
           return 0
         }
         return prev - 1
@@ -30,7 +39,7 @@ export function UndoDelete({ deletedTask, onUndo, onDismiss }: UndoDeleteProps) 
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [deletedTask, onDismiss])
+  }, [deletedTask]) // Only depend on deletedTask, not onDismiss
 
   if (!deletedTask) return null
 
@@ -57,7 +66,7 @@ export function UndoDelete({ deletedTask, onUndo, onDismiss }: UndoDeleteProps) 
               Task #{deletedTask.project}-{deletedTask.task_no.toString().padStart(3, '0')}: {deletedTask.task_description}
             </p>
             <p className="text-xs text-gray-500">
-              Undo available for {timeLeft} seconds
+              Undo available for <span className="font-semibold text-red-600">{timeLeft}</span> seconds
             </p>
           </div>
 

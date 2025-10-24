@@ -16,9 +16,10 @@ interface TaskTableProps {
   onTaskUpdate: (task: Task) => void
   onTaskDelete: (id: string) => void
   onTaskCreate: (task: CreateTaskData) => void
+  onTaskCreateMultiple?: (tasks: CreateTaskData[]) => void
 }
 
-export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: TaskTableProps) {
+export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onTaskCreateMultiple }: TaskTableProps) {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks)
@@ -263,6 +264,7 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
         isOpen={isModalOpen}
         onClose={handleModalClose}
         onSave={handleTaskSave}
+        onSaveMultiple={onTaskCreateMultiple}
         task={editingTask}
       />
 

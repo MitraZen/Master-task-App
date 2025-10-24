@@ -111,6 +111,83 @@ function TasksPageContent() {
     }
   }
 
+  const createMultipleTasks = async (tasksData: CreateTaskData[]) => {
+    const toastId = showToast.loading(`Creating ${tasksData.length} tasks...`)
+    
+    try {
+      const tempTasks: Task[] = []
+      const tempIds: string[] = []
+      
+      // Generate temporary tasks for local state
+      tasksData.forEach((taskData, index) => {
+        const tempId = `temp-${Date.now()}-${index}`
+        const tempTask: Task = {
+          ...taskData,
+          id: tempId,
+          task_no: tasks.length + index + 1, // Temporary task numbers
+          is_archived: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        tempTasks.push(tempTask)
+        tempIds.push(tempId)
+      })
+      
+      // Add all tasks to local state immediately
+      setTasks(prev => [...prev, ...tempTasks])
+      LocalStorageManager.saveTasks([...tasks, ...tempTasks])
+      
+      // Create tasks in database one by one
+      const createdTasks: Task[] = []
+      let successCount = 0
+      
+      for (const taskData of tasksData) {
+        try {
+          const response = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(taskData),
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            createdTasks.push(data.task)
+            successCount++
+          } else {
+            console.error('Failed to create task:', response.statusText)
+          }
+        } catch (err) {
+          console.error('Error creating task:', err)
+        }
+      }
+      
+      // Replace temp tasks with real tasks from database
+      if (createdTasks.length > 0) {
+        setTasks(prev => {
+          let updatedTasks = [...prev]
+          createdTasks.forEach((realTask, index) => {
+            const tempId = tempIds[index]
+            updatedTasks = updatedTasks.map(t => t.id === tempId ? realTask : t)
+          })
+          LocalStorageManager.saveTasks(updatedTasks)
+          return updatedTasks
+        })
+      }
+      
+      showToast.dismiss(toastId)
+      if (successCount === tasksData.length) {
+        showToast.success(`${successCount} tasks created successfully`)
+      } else {
+        showToast.success(`${successCount}/${tasksData.length} tasks created successfully`)
+      }
+    } catch (err) {
+      showToast.dismiss(toastId)
+      showToast.success(`${tasksData.length} tasks created (offline mode)`)
+    }
+  }
+
   const updateTask = async (task: Task) => {
     try {
       // Update local state immediately for better UX
@@ -264,6 +341,7 @@ function TasksPageContent() {
         <TaskTable
           tasks={tasks}
           onTaskCreate={createTask}
+          onTaskCreateMultiple={createMultipleTasks}
           onTaskUpdate={updateTask}
           onTaskDelete={deleteTask}
         />

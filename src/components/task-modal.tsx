@@ -14,10 +14,11 @@ interface TaskModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (task: CreateTaskData) => void
+  onSaveMultiple?: (tasks: CreateTaskData[]) => void
   task?: Task | null
 }
 
-export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
+export function TaskModal({ isOpen, onClose, onSave, onSaveMultiple, task }: TaskModalProps) {
   const [formData, setFormData] = useState({
     project: 'DEFAULT',
     stage_gates: 'SG1',
@@ -32,6 +33,12 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
     status: 'Not Started',
     done: false,
     notes: ''
+  })
+
+  const [recurringData, setRecurringData] = useState({
+    recurring_start_date: '',
+    recurring_end_date: '',
+    is_recurring: false
   })
 
   const [assignedToOptions, setAssignedToOptions] = useState<DropdownOption[]>([])
@@ -176,7 +183,75 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    
+    if (recurringData.is_recurring && isRecurringFrequency(formData.frequency)) {
+      // Create recurring tasks
+      const tasks = generateRecurringTasks()
+      if (onSaveMultiple) {
+        onSaveMultiple(tasks)
+      } else {
+        tasks.forEach(task => onSave(task))
+      }
+    } else {
+      // Create single task
+      onSave(formData)
+    }
+  }
+
+  const generateRecurringTasks = (): CreateTaskData[] => {
+    if (!recurringData.recurring_start_date || !recurringData.recurring_end_date) {
+      return [formData]
+    }
+
+    const startDate = new Date(recurringData.recurring_start_date)
+    const endDate = new Date(recurringData.recurring_end_date)
+    const tasks: CreateTaskData[] = []
+    let currentDate = new Date(startDate)
+
+    while (currentDate <= endDate) {
+      const taskStartDate = new Date(currentDate)
+      const taskDueDate = new Date(currentDate)
+      
+      // Set due date based on frequency
+      switch (formData.frequency) {
+        case 'Daily':
+          taskDueDate.setDate(taskDueDate.getDate() + 1)
+          break
+        case 'Weekly':
+          taskDueDate.setDate(taskDueDate.getDate() + 7)
+          break
+        case 'Monthly':
+          taskDueDate.setMonth(taskDueDate.getMonth() + 1)
+          break
+        case 'Yearly':
+          taskDueDate.setFullYear(taskDueDate.getFullYear() + 1)
+          break
+      }
+
+      tasks.push({
+        ...formData,
+        start_date: taskStartDate.toISOString().split('T')[0],
+        due_date: taskDueDate.toISOString().split('T')[0]
+      })
+
+      // Move to next occurrence
+      switch (formData.frequency) {
+        case 'Daily':
+          currentDate.setDate(currentDate.getDate() + 1)
+          break
+        case 'Weekly':
+          currentDate.setDate(currentDate.getDate() + 7)
+          break
+        case 'Monthly':
+          currentDate.setMonth(currentDate.getMonth() + 1)
+          break
+        case 'Yearly':
+          currentDate.setFullYear(currentDate.getFullYear() + 1)
+          break
+      }
+    }
+
+    return tasks
   }
 
   const handleInputChange = (field: string, value: any) => {
@@ -184,6 +259,39 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
       ...prev,
       [field]: value
     }))
+  }
+
+  const handleRecurringInputChange = (field: string, value: any) => {
+    setRecurringData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const isRecurringFrequency = (frequency: string) => {
+    return ['Daily', 'Weekly', 'Monthly', 'Yearly'].includes(frequency)
+  }
+
+  const calculateOccurrences = () => {
+    if (!recurringData.recurring_start_date || !recurringData.recurring_end_date) return 0
+    
+    const startDate = new Date(recurringData.recurring_start_date)
+    const endDate = new Date(recurringData.recurring_end_date)
+    
+    if (startDate >= endDate) return 0
+    
+    switch (formData.frequency) {
+      case 'Daily':
+        return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+      case 'Weekly':
+        return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 7)) + 1
+      case 'Monthly':
+        return (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1
+      case 'Yearly':
+        return endDate.getFullYear() - startDate.getFullYear() + 1
+      default:
+        return 1
+    }
   }
 
   return (
@@ -258,7 +366,17 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
               <Label htmlFor="frequency">Frequency</Label>
               <Select
                 value={formData.frequency}
-                onValueChange={(value) => handleInputChange('frequency', value)}
+                onValueChange={(value) => {
+                  handleInputChange('frequency', value)
+                  // Reset recurring data when frequency changes
+                  if (!isRecurringFrequency(value)) {
+                    setRecurringData({
+                      recurring_start_date: '',
+                      recurring_end_date: '',
+                      is_recurring: false
+                    })
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -272,6 +390,62 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Recurring Task Fields */}
+            {isRecurringFrequency(formData.frequency) && (
+              <>
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_recurring"
+                      checked={recurringData.is_recurring}
+                      onCheckedChange={(checked) => handleRecurringInputChange('is_recurring', checked)}
+                    />
+                    <Label htmlFor="is_recurring" className="text-sm font-medium">
+                      Create recurring tasks ({formData.frequency})
+                    </Label>
+                  </div>
+                </div>
+
+                {recurringData.is_recurring && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="recurring_start_date">Recurring Start Date *</Label>
+                      <Input
+                        id="recurring_start_date"
+                        type="date"
+                        value={recurringData.recurring_start_date}
+                        onChange={(e) => handleRecurringInputChange('recurring_start_date', e.target.value)}
+                        required={recurringData.is_recurring}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="recurring_end_date">Recurring End Date *</Label>
+                      <Input
+                        id="recurring_end_date"
+                        type="date"
+                        value={recurringData.recurring_end_date}
+                        onChange={(e) => handleRecurringInputChange('recurring_end_date', e.target.value)}
+                        required={recurringData.is_recurring}
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-blue-800">
+                          <strong>Will create {calculateOccurrences()} tasks</strong> from{' '}
+                          {recurringData.recurring_start_date} to {recurringData.recurring_end_date}
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Each task will have the same details but different dates based on {formData.frequency} frequency.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="priority">Priority</Label>

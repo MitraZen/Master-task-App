@@ -30,7 +30,6 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
     due_date: '',
     est_hours: 0,
     status: 'Not Started',
-    percent_complete: 0,
     done: false,
     notes: ''
   })
@@ -153,7 +152,6 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
         due_date: task.due_date,
         est_hours: task.est_hours,
         status: task.status,
-        percent_complete: task.percent_complete,
         done: task.done,
         notes: task.notes || ''
       })
@@ -170,7 +168,6 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
         due_date: '',
         est_hours: 0,
         status: 'Not Started',
-        percent_complete: 0,
         done: false,
         notes: ''
       })
@@ -379,18 +376,6 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
                 disabled
                 className="bg-gray-100 text-gray-500"
                 placeholder="Auto-calculated from due date"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="percent_complete">% Complete</Label>
-              <Input
-                id="percent_complete"
-                type="number"
-                min="0"
-                max="100"
-                value={formData.percent_complete}
-                onChange={(e) => handleInputChange('percent_complete', parseInt(e.target.value) || 0)}
               />
             </div>
           </div>

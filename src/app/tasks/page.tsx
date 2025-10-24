@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import { Task, CreateTaskData } from '@/types/task'
 import { TaskTable } from '@/components/task-table'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Database, LogOut, Archive } from 'lucide-react'
+import { RefreshCw, Database, LogOut, Archive, Settings } from 'lucide-react'
 import { PageLoading } from '@/components/loading'
 import { showToast } from '@/components/toast'
 import { getDatabaseStatus } from '@/lib/env'
 import { LocalStorageManager, SyncManager } from '@/lib/persistence'
 import ProtectedRoute from '@/components/protected-route'
 import { useAuth } from '@/contexts/auth-context'
+import AdminDropdownManager from '@/components/admin-dropdown-manager'
 
 function TasksPageContent() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -20,6 +21,7 @@ function TasksPageContent() {
   
   // Deletion state
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isAdminOpen, setIsAdminOpen] = useState(false)
 
   const fetchTasks = async () => {
     try {
@@ -217,16 +219,23 @@ function TasksPageContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        {/* Header with logout button */}
+        {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Welcome, {username}!</h1>
-            <p className="text-gray-600">Manage your tasks efficiently</p>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Master Task Tracker</h1>
           <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setIsAdminOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Admin
+            </Button>
             <Button
               onClick={() => window.location.href = '/archive'}
               variant="outline"
+              size="sm"
               className="flex items-center gap-2"
             >
               <Archive className="h-4 w-4" />
@@ -235,6 +244,7 @@ function TasksPageContent() {
             <Button
               onClick={logout}
               variant="outline"
+              size="sm"
               className="flex items-center gap-2"
             >
               <LogOut className="h-4 w-4" />
@@ -259,6 +269,12 @@ function TasksPageContent() {
             </p>
           </div>
         )}
+        
+        {/* Admin Modal */}
+        <AdminDropdownManager
+          isOpen={isAdminOpen}
+          onClose={() => setIsAdminOpen(false)}
+        />
         
       </div>
     </div>

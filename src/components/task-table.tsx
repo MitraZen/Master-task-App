@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, Circle, Edit, Trash2, Settings } from 'lucide-react'
+import { CheckCircle, Circle, Edit, Trash2 } from 'lucide-react'
 import { TaskModal } from './task-modal'
 import { TaskFilters } from './task-filters'
-import AdminDropdownManager from './admin-dropdown-manager'
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog'
 
 interface TaskTableProps {
@@ -22,7 +21,6 @@ interface TaskTableProps {
 export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: TaskTableProps) {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isAdminOpen, setIsAdminOpen] = useState(false)
   const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks)
   
   // Delete confirmation state
@@ -144,17 +142,8 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Master Task Tracker</h1>
+      <div className="flex justify-end">
         <div className="flex gap-2">
-          <Button 
-            onClick={() => setIsAdminOpen(true)} 
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Settings className="h-4 w-4" />
-            Admin
-          </Button>
           <Button onClick={handleAddTask} className="bg-blue-600 hover:bg-blue-700">
             Add Task
           </Button>
@@ -167,70 +156,70 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
         <Table>
           <TableHeader>
             <TableRow className="bg-blue-600 text-white">
-              <TableHead className="text-white font-semibold w-20">Task No</TableHead>
-              <TableHead className="text-white font-semibold w-24">Stage Gates</TableHead>
-              <TableHead className="text-white font-semibold w-28">Task Type</TableHead>
-              <TableHead className="text-white font-semibold w-20">Frequency</TableHead>
-              <TableHead className="text-white font-semibold w-20">Priority</TableHead>
-              <TableHead className="text-white font-semibold w-96">Task Description</TableHead>
-              <TableHead className="text-white font-semibold w-24">Assigned To</TableHead>
-              <TableHead className="text-white font-semibold w-24">Start Date</TableHead>
-              <TableHead className="text-white font-semibold w-24">Due Date</TableHead>
-              <TableHead className="text-white font-semibold w-28">ETR (Est. Time Rem.)</TableHead>
-              <TableHead className="text-white font-semibold w-24">Status</TableHead>
-              <TableHead className="text-white font-semibold w-16">Done</TableHead>
-              <TableHead className="text-white font-semibold w-32">Notes</TableHead>
-              <TableHead className="text-white font-semibold w-24">Actions</TableHead>
+              <TableHead className="text-white font-semibold w-20 py-2">Task No</TableHead>
+              <TableHead className="text-white font-semibold w-24 py-2">Stage Gates</TableHead>
+              <TableHead className="text-white font-semibold w-28 py-2">Task Type</TableHead>
+              <TableHead className="text-white font-semibold w-20 py-2">Frequency</TableHead>
+              <TableHead className="text-white font-semibold w-20 py-2">Priority</TableHead>
+              <TableHead className="text-white font-semibold w-96 py-2">Task Description</TableHead>
+              <TableHead className="text-white font-semibold w-24 py-2">Assigned To</TableHead>
+              <TableHead className="text-white font-semibold w-24 py-2">Start Date</TableHead>
+              <TableHead className="text-white font-semibold w-24 py-2">Due Date</TableHead>
+              <TableHead className="text-white font-semibold w-28 py-2">ETR (Est. Time Rem.)</TableHead>
+              <TableHead className="text-white font-semibold w-24 py-2">Status</TableHead>
+              <TableHead className="text-white font-semibold w-16 py-2">Done</TableHead>
+              <TableHead className="text-white font-semibold w-32 py-2">Notes</TableHead>
+              <TableHead className="text-white font-semibold w-24 py-2">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredTasks.map((task) => (
               <TableRow key={task.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium text-center">
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
+                <TableCell className="font-medium text-center py-2">
+                  <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-semibold">
                     {task.project}-{task.task_no.toString().padStart(3, '0')}
                   </span>
                 </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
+                <TableCell className="text-center py-2">
+                  <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 text-xs px-1.5 py-0.5">
                     {task.stage_gates}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200 text-xs">
+                <TableCell className="text-center py-2">
+                  <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200 text-xs px-1.5 py-0.5">
                     {task.task_type}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-center text-sm">{task.frequency}</TableCell>
-                <TableCell className="text-center">
-                  <Badge className={`${getPriorityColor(task.priority)} text-xs`}>
+                <TableCell className="text-center text-xs py-2">{task.frequency}</TableCell>
+                <TableCell className="text-center py-2">
+                  <Badge className={`${getPriorityColor(task.priority)} text-xs px-1.5 py-0.5`}>
                     {task.priority}
                   </Badge>
                 </TableCell>
-                <TableCell className="w-96">
-                  <div className="whitespace-normal break-words text-gray-900 text-sm">
+                <TableCell className="w-96 py-2">
+                  <div className="whitespace-normal break-words text-gray-900 text-xs leading-tight">
                     {task.task_description}
                   </div>
                 </TableCell>
-                <TableCell className="text-center text-sm">{task.assigned_to === 'none' ? 'None' : (task.assigned_to || 'None')}</TableCell>
-                <TableCell className="text-center text-sm">{formatDate(task.start_date)}</TableCell>
-                <TableCell className="text-center text-sm">{formatDate(task.due_date)}</TableCell>
-                <TableCell className="text-center">
-                  <span className={`${getETRStyling(calculateDaysRemaining(task.due_date))} text-xs`}>
+                <TableCell className="text-center text-xs py-2">{task.assigned_to === 'none' ? 'None' : (task.assigned_to || 'None')}</TableCell>
+                <TableCell className="text-center text-xs py-2">{formatDate(task.start_date)}</TableCell>
+                <TableCell className="text-center text-xs py-2">{formatDate(task.due_date)}</TableCell>
+                <TableCell className="text-center py-2">
+                  <span className={`${getETRStyling(calculateDaysRemaining(task.due_date))} text-xs px-1.5 py-0.5 rounded`}>
                     {calculateDaysRemaining(task.due_date) >= 0 ? `+${calculateDaysRemaining(task.due_date)}` : `${calculateDaysRemaining(task.due_date)}`}
                   </span>
                 </TableCell>
-                <TableCell className="text-center">
-                  <Badge className={getStatusColor(task.status)}>
+                <TableCell className="text-center py-2">
+                  <Badge className={`${getStatusColor(task.status)} text-xs px-1.5 py-0.5`}>
                     {task.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell className="text-center py-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleToggleDone(task)}
-                    className="p-1"
+                    className="p-1 h-6 w-6"
                   >
                     {task.done ? (
                       <CheckCircle className="h-4 w-4 text-green-600" />
@@ -239,28 +228,28 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
                     )}
                   </Button>
                 </TableCell>
-                <TableCell className="text-sm">
-                  <div className="whitespace-normal break-words text-gray-600 max-w-32">
+                <TableCell className="text-xs py-2">
+                  <div className="whitespace-normal break-words text-gray-600 max-w-32 leading-tight">
                     {task.notes || '-'}
                   </div>
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell className="text-center py-2">
                   <div className="flex justify-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEditTask(task)}
-                      className="p-1"
+                      className="h-6 w-6 p-0"
                     >
-                      <Edit className="h-4 w-4 text-blue-600" />
+                      <Edit className="h-3 w-3 text-blue-600" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteClick(task)}
-                      className="p-1"
+                      className="h-6 w-6 p-0"
                     >
-                      <Trash2 className="h-4 w-4 text-red-600" />
+                      <Trash2 className="h-3 w-3 text-red-600" />
                     </Button>
                   </div>
                 </TableCell>
@@ -275,11 +264,6 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
         onClose={handleModalClose}
         onSave={handleTaskSave}
         task={editingTask}
-      />
-
-      <AdminDropdownManager
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
       />
 
       <DeleteConfirmationDialog

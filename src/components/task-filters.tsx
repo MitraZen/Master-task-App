@@ -21,6 +21,7 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
     stage_gates: 'all',
     task_type: 'all',
     assigned_to: 'all',
+    due_date: 'all', // New: date-based filtering
     search: ''
   })
 
@@ -34,6 +35,31 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
     const newFilters = { ...filters, [key]: value }
     setFilters(newFilters)
     applyFilters(tasks, newFilters)
+  }
+
+  // Helper functions for date-based filtering
+  const isToday = (dateString: string) => {
+    const today = new Date()
+    const taskDate = new Date(dateString)
+    return taskDate.toDateString() === today.toDateString()
+  }
+
+  const isThisWeek = (dateString: string) => {
+    const today = new Date()
+    const taskDate = new Date(dateString)
+    const startOfWeek = new Date(today)
+    startOfWeek.setDate(today.getDate() - today.getDay()) // Start of current week (Sunday)
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6) // End of current week (Saturday)
+    
+    return taskDate >= startOfWeek && taskDate <= endOfWeek
+  }
+
+  const isThisMonth = (dateString: string) => {
+    const today = new Date()
+    const taskDate = new Date(dateString)
+    return taskDate.getMonth() === today.getMonth() && 
+           taskDate.getFullYear() === today.getFullYear()
   }
 
   const clearFilter = (key: string) => {
@@ -84,6 +110,22 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
       filtered = filtered.filter(task => task.assigned_to === currentFilters.assigned_to)
     }
 
+    // Apply date-based filter
+    if (currentFilters.due_date && currentFilters.due_date !== 'all') {
+      filtered = filtered.filter(task => {
+        switch (currentFilters.due_date) {
+          case 'today':
+            return isToday(task.due_date)
+          case 'this_week':
+            return isThisWeek(task.due_date)
+          case 'this_month':
+            return isThisMonth(task.due_date)
+          default:
+            return true
+        }
+      })
+    }
+
     onFilter(filtered)
   }
 
@@ -95,6 +137,7 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
       stage_gates: 'all',
       task_type: 'all',
       assigned_to: 'all',
+      due_date: 'all',
       search: ''
     }
     setFilters(clearedFilters)
@@ -249,6 +292,24 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
                   {assignee}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Due Date</label>
+          <Select
+            value={filters.due_date}
+            onValueChange={(value) => handleFilterChange('due_date', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Dates" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Dates</SelectItem>
+              <SelectItem value="today">Due Today</SelectItem>
+              <SelectItem value="this_week">Due This Week</SelectItem>
+              <SelectItem value="this_month">Due This Month</SelectItem>
             </SelectContent>
           </Select>
         </div>

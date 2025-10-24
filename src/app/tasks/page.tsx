@@ -67,6 +67,7 @@ function TasksPageContent() {
         id: tempId,
         task_no: tasks.length + 1, // Temporary task number
         is_archived: false, // New tasks are not archived
+        percent_complete: 0, // Default value for new tasks
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }

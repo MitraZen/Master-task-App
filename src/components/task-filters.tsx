@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Task } from '@/types/task'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { MultiSelect } from '@/components/ui/multi-select'
 import { Input } from '@/components/ui/input'
 import { Filter, X } from 'lucide-react'
 
@@ -15,7 +16,7 @@ interface TaskFiltersProps {
 export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
   const [filters, setFilters] = useState({
     priority: 'all',
-    status: 'all',
+    status: [] as string[], // Changed to array for multi-select
     frequency: 'all',
     stage_gates: 'all',
     task_type: 'all',
@@ -24,6 +25,12 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
   })
 
   const handleFilterChange = (key: string, value: string) => {
+    const newFilters = { ...filters, [key]: value }
+    setFilters(newFilters)
+    applyFilters(tasks, newFilters)
+  }
+
+  const handleMultiSelectChange = (key: string, value: string[]) => {
     const newFilters = { ...filters, [key]: value }
     setFilters(newFilters)
     applyFilters(tasks, newFilters)
@@ -53,8 +60,8 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
     }
 
     // Apply status filter
-    if (currentFilters.status && currentFilters.status !== 'all') {
-      filtered = filtered.filter(task => task.status === currentFilters.status)
+    if (currentFilters.status && currentFilters.status.length > 0) {
+      filtered = filtered.filter(task => currentFilters.status.includes(task.status))
     }
 
     // Apply frequency filter
@@ -83,7 +90,7 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
   const clearFilters = () => {
     const clearedFilters = {
       priority: 'all',
-      status: 'all',
+      status: [] as string[],
       frequency: 'all',
       stage_gates: 'all',
       task_type: 'all',
@@ -94,9 +101,11 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
     onFilter(tasks)
   }
 
-  const hasActiveFilters = Object.entries(filters).some(([key, value]) => 
-    key === 'search' ? value !== '' : value !== '' && value !== 'all'
-  )
+  const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+    if (key === 'search') return value !== ''
+    if (key === 'status') return Array.isArray(value) && value.length > 0
+    return value !== '' && value !== 'all'
+  })
 
   // Get unique values for dropdowns
   const priorities = [...new Set(tasks.map(task => task.priority))]
@@ -196,22 +205,12 @@ export function TaskFilters({ tasks, onFilter }: TaskFiltersProps) {
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Status</label>
-          <Select
+          <MultiSelect
+            options={statuses}
             value={filters.status}
-            onValueChange={(value) => handleFilterChange('status', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {statuses.map(status => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(value) => handleMultiSelectChange('status', value)}
+            placeholder="All Statuses"
+          />
         </div>
 
         <div className="space-y-2">

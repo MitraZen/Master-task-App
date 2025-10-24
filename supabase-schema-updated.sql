@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS tasks (
   due_date DATE NOT NULL,
   est_hours NUMERIC(10,2) DEFAULT 0, -- Deprecated: kept for compatibility, ETR is now calculated from due_date
   status TEXT NOT NULL DEFAULT 'Not Started' CHECK (status IN ('Not Started', 'In Progress', 'Complete', 'Overdue', 'On-Hold')),
-  percent_complete NUMERIC(5,2) DEFAULT 0 CHECK (percent_complete >= 0 AND percent_complete <= 100),
   done BOOLEAN DEFAULT FALSE,
   notes TEXT,
   is_archived BOOLEAN DEFAULT FALSE, -- New: Archive flag for soft deletion
@@ -238,6 +237,31 @@ BEGIN
     END IF;
 END $$;
 
+-- Remove percent_complete column from existing tasks table (if it exists)
+DO $$ 
+BEGIN
+    -- Drop percent_complete column if it exists
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'tasks' 
+        AND column_name = 'percent_complete'
+    ) THEN
+        ALTER TABLE tasks DROP COLUMN percent_complete;
+    END IF;
+END $$;
+
+-- Remove percent_complete from task_fields_config table (if it exists)
+DO $$ 
+BEGIN
+    -- Delete percent_complete field from task_fields_config if it exists
+    IF EXISTS (
+        SELECT 1 FROM task_fields_config 
+        WHERE field_name = 'percent_complete'
+    ) THEN
+        DELETE FROM task_fields_config WHERE field_name = 'percent_complete';
+    END IF;
+END $$;
+
 -- Insert default dropdown options
 INSERT INTO dropdown_options (field_name, option_value, option_label, sort_order) VALUES
   -- Projects
@@ -312,9 +336,8 @@ INSERT INTO task_fields_config (field_name, field_type, visible, sort_order) VAL
   ('due_date', 'date', true, 9),
   ('est_hours', 'number', false, 10), -- Deprecated: ETR is now calculated from due_date
   ('status', 'select', true, 11),
-  ('percent_complete', 'number', true, 12),
-  ('done', 'boolean', true, 13),
-  ('notes', 'text', true, 14)
+  ('done', 'boolean', true, 12),
+  ('notes', 'text', true, 13)
 ON CONFLICT (field_name) DO NOTHING;
 
 -- Create function to automatically update updated_at timestamp
@@ -344,9 +367,8 @@ BEGIN
     NEW.status = 'Overdue';
   END IF;
   
-  -- If task is marked as done, set percent_complete to 100 and status to Complete
+  -- If task is marked as done, set status to Complete
   IF NEW.done = TRUE THEN
-    NEW.percent_complete = 100;
     NEW.status = 'Complete';
   END IF;
   

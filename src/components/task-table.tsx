@@ -71,7 +71,6 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
         id: editingTask.id,
         task_no: editingTask.task_no,
         is_archived: editingTask.is_archived,
-        percent_complete: editingTask.percent_complete,
         created_at: editingTask.created_at,
         updated_at: editingTask.updated_at
       })

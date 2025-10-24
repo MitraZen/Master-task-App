@@ -12,7 +12,6 @@ export interface Task {
   due_date: string
   est_hours: number
   status: string
-  percent_complete: number
   done: boolean
   notes?: string
   is_archived: boolean

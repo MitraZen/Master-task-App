@@ -84,13 +84,18 @@ function TasksPageContent() {
         body: JSON.stringify(taskData),
       })
 
+      console.log('Task creation response:', response.status, response.statusText)
+      
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Task creation failed:', response.status, errorText)
         showToast.dismiss(toastId)
         showToast.success('Task created (offline mode)')
         return
       }
 
       const data = await response.json()
+      console.log('Task creation success:', data)
       // Replace temp task with real task from database
       setTasks(prev => {
         const updatedTasks = prev.map(t => t.id === tempId ? data.task : t)

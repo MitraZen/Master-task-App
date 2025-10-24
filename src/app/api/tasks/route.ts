@@ -59,11 +59,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('POST /api/tasks - Task creation request received')
     const supabase = await createClient()
     const body: CreateTaskData = await request.json()
+    
+    console.log('Task data received:', body)
 
     // Validate required fields
     if (!body.task_description || !body.start_date || !body.due_date || !body.project) {
+      console.error('Missing required fields:', { task_description: !!body.task_description, start_date: !!body.start_date, due_date: !!body.due_date, project: !!body.project })
       return NextResponse.json(
         { error: 'Missing required fields: task_description, start_date, due_date, project' },
         { status: 400 }
@@ -75,14 +79,19 @@ export async function POST(request: NextRequest) {
       .rpc('get_next_task_no', { project_name: body.project })
 
     if (taskNoError) {
+      console.error('Failed to get task number:', taskNoError)
       return NextResponse.json({ error: `Failed to get task number: ${taskNoError.message}` }, { status: 500 })
     }
+    
+    console.log('Next task number:', nextTaskNo)
 
     // Create the task with the project-specific task number
     const taskData = {
       ...body,
       task_no: nextTaskNo
     }
+    
+    console.log('Final task data to insert:', taskData)
 
     const { data: task, error } = await supabase
       .from('tasks')
@@ -91,9 +100,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
+      console.error('Database insert error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
+    
+    console.log('Task created successfully:', task)
     return NextResponse.json({ task }, { status: 201 })
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

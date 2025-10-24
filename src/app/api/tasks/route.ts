@@ -62,16 +62,30 @@ export async function POST(request: NextRequest) {
     const body: CreateTaskData = await request.json()
 
     // Validate required fields
-    if (!body.task_description || !body.start_date || !body.due_date) {
+    if (!body.task_description || !body.start_date || !body.due_date || !body.project) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: task_description, start_date, due_date, project' },
         { status: 400 }
       )
     }
 
+    // Get the next task number for this project
+    const { data: nextTaskNo, error: taskNoError } = await supabase
+      .rpc('get_next_task_no', { project_name: body.project })
+
+    if (taskNoError) {
+      return NextResponse.json({ error: `Failed to get task number: ${taskNoError.message}` }, { status: 500 })
+    }
+
+    // Create the task with the project-specific task number
+    const taskData = {
+      ...body,
+      task_no: nextTaskNo
+    }
+
     const { data: task, error } = await supabase
       .from('tasks')
-      .insert([body])
+      .insert([taskData])
       .select()
       .single()
 

@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS dropdown_options (
 -- Create tasks table with new columns (only if it doesn't exist)
 CREATE TABLE IF NOT EXISTS tasks (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  task_no INTEGER GENERATED ALWAYS AS IDENTITY, -- Auto-incrementing task number
+  task_no INTEGER NOT NULL DEFAULT 1, -- Project-specific task number
   project TEXT NOT NULL DEFAULT 'DEFAULT', -- Project identifier
   stage_gates TEXT NOT NULL CHECK (stage_gates IN ('SG1', 'SG2', 'SG3', 'SG4', 'SG5', 'FID', 'FDD')),
   task_type TEXT NOT NULL CHECK (task_type IN ('Initiation', 'Requirements', 'Design', 'Development', 'Testing', 'ERS', 'S&T', 'SOM', 'Snow', 'Go_Live', 'Discovery', 'Cutover', 'AtD', 'AtO', 'KT', 'Hypercare')),
@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   done BOOLEAN DEFAULT FALSE,
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(project, task_no) -- Ensure unique task numbers per project
 );
 
 -- Update existing CHECK constraint to include On-Hold status
@@ -53,6 +54,68 @@ BEGIN
             NULL;
     END;
 END $$;
+
+-- Create project-specific sequences
+DO $$ 
+BEGIN
+    -- Create sequences for each project
+    CREATE SEQUENCE IF NOT EXISTS tasks_task_no_default_seq START 1;
+    CREATE SEQUENCE IF NOT EXISTS tasks_task_no_proj_a_seq START 1;
+    CREATE SEQUENCE IF NOT EXISTS tasks_task_no_proj_b_seq START 1;
+    CREATE SEQUENCE IF NOT EXISTS tasks_task_no_proj_c_seq START 1;
+    CREATE SEQUENCE IF NOT EXISTS tasks_task_no_maint_seq START 1;
+    CREATE SEQUENCE IF NOT EXISTS tasks_task_no_rnd_seq START 1;
+END $$;
+
+-- Create function to add new project sequences dynamically
+CREATE OR REPLACE FUNCTION create_project_sequence(project_name TEXT)
+RETURNS VOID AS $$
+DECLARE
+    seq_name TEXT;
+BEGIN
+    -- Convert project name to valid sequence name
+    seq_name := 'tasks_task_no_' || lower(replace(replace(project_name, '-', '_'), '&', 'and')) || '_seq';
+    
+    -- Create sequence if it doesn't exist
+    EXECUTE format('CREATE SEQUENCE IF NOT EXISTS %I START 1', seq_name);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to get next task number for a project
+CREATE OR REPLACE FUNCTION get_next_task_no(project_name TEXT)
+RETURNS INTEGER AS $$
+DECLARE
+    next_no INTEGER;
+    seq_name TEXT;
+BEGIN
+    -- Map project names to sequence names
+    CASE project_name
+        WHEN 'DEFAULT' THEN
+            SELECT nextval('tasks_task_no_default_seq') INTO next_no;
+        WHEN 'PROJ-A' THEN
+            SELECT nextval('tasks_task_no_proj_a_seq') INTO next_no;
+        WHEN 'PROJ-B' THEN
+            SELECT nextval('tasks_task_no_proj_b_seq') INTO next_no;
+        WHEN 'PROJ-C' THEN
+            SELECT nextval('tasks_task_no_proj_c_seq') INTO next_no;
+        WHEN 'MAINT' THEN
+            SELECT nextval('tasks_task_no_maint_seq') INTO next_no;
+        WHEN 'R&D' THEN
+            SELECT nextval('tasks_task_no_rnd_seq') INTO next_no;
+        ELSE
+            -- For new projects, create sequence dynamically
+            seq_name := 'tasks_task_no_' || lower(replace(replace(project_name, '-', '_'), '&', 'and')) || '_seq';
+            
+            -- Create sequence if it doesn't exist
+            EXECUTE format('CREATE SEQUENCE IF NOT EXISTS %I START 1', seq_name);
+            
+            -- Get next value from the sequence
+            EXECUTE format('SELECT nextval(%L)', seq_name) INTO next_no;
+    END CASE;
+    
+    RETURN next_no;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Add missing columns to existing tasks table
 DO $$ 

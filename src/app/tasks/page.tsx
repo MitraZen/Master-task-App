@@ -92,8 +92,11 @@ function TasksPageContent() {
 
       const data = await response.json()
       // Replace temp task with real task from database
-      setTasks(prev => prev.map(t => t.id === tempId ? data.task : t))
-      LocalStorageManager.saveTasks(tasks.map(t => t.id === tempId ? data.task : t))
+      setTasks(prev => {
+        const updatedTasks = prev.map(t => t.id === tempId ? data.task : t)
+        LocalStorageManager.saveTasks(updatedTasks)
+        return updatedTasks
+      })
       
       showToast.dismiss(toastId)
       showToast.success('Task created successfully')

@@ -138,18 +138,26 @@ function TasksPageContent() {
 
     setIsDeleting(true)
     
+    // Store the current tasks for localStorage update
+    const currentTasks = tasks
+    
     try {
       // Remove from local state immediately for better UX
       setTasks(prev => prev.filter(t => t.id !== id))
       
       // Try to delete from database
+      console.log(`Attempting to delete task ${id} from database`)
       const response = await fetch(`/api/tasks/${id}`, {
         method: 'DELETE',
       })
 
+      console.log(`Delete response status: ${response.status}`)
+      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         const errorMessage = errorData.error || 'Failed to delete task from database'
+        
+        console.error(`Database deletion failed: ${errorMessage}`)
         
         // Restore task to local state if database deletion failed
         setTasks(prev => [...prev, taskToDelete])
@@ -158,12 +166,16 @@ function TasksPageContent() {
         return
       }
 
+      const responseData = await response.json()
+      console.log(`Delete successful:`, responseData)
+
       // Success - show undo option
       setDeletedTask(taskToDelete)
       showToast.success('Task deleted successfully')
       
-      // Save updated tasks to localStorage
-      LocalStorageManager.saveTasks(tasks.filter(t => t.id !== id))
+      // Save updated tasks to localStorage (use the original tasks without the deleted one)
+      const updatedTasks = currentTasks.filter(t => t.id !== id)
+      LocalStorageManager.saveTasks(updatedTasks)
       
     } catch (err) {
       // Network error - restore task to local state
@@ -178,11 +190,13 @@ function TasksPageContent() {
 
   const undoDelete = (task: Task) => {
     // Restore the task to the tasks list
-    setTasks(prev => [...prev, task])
+    setTasks(prev => {
+      const updatedTasks = [...prev, task]
+      // Save updated tasks to localStorage
+      LocalStorageManager.saveTasks(updatedTasks)
+      return updatedTasks
+    })
     setDeletedTask(null)
-    
-    // Save updated tasks to localStorage
-    LocalStorageManager.saveTasks([...tasks, task])
   }
 
   const dismissUndo = () => {

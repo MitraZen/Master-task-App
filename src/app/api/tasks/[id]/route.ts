@@ -46,17 +46,23 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    const { error } = await supabase
+    console.log(`Attempting to delete task with ID: ${id}`)
+
+    const { data, error } = await supabase
       .from('tasks')
       .delete()
       .eq('id', id)
+      .select()
 
     if (error) {
+      console.error('Supabase delete error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    console.log(`Task deleted successfully. Deleted rows: ${data?.length || 0}`)
+    return NextResponse.json({ success: true, deletedCount: data?.length || 0 })
   } catch (error) {
+    console.error('Delete API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

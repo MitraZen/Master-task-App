@@ -168,7 +168,7 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
               <TableHead className="text-white font-semibold w-28 py-2">ETR (Est. Time Rem.)</TableHead>
               <TableHead className="text-white font-semibold w-24 py-2">Status</TableHead>
               <TableHead className="text-white font-semibold w-16 py-2">Done</TableHead>
-              <TableHead className="text-white font-semibold w-32 py-2">Notes</TableHead>
+              <TableHead className="text-white font-semibold w-48 py-2">Notes</TableHead>
               <TableHead className="text-white font-semibold w-24 py-2">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -229,7 +229,7 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
                   </Button>
                 </TableCell>
                 <TableCell className="text-xs py-2">
-                  <div className="whitespace-normal break-words text-gray-600 max-w-32 leading-tight">
+                  <div className="whitespace-normal break-words text-gray-600 max-w-48 leading-tight">
                     {task.notes || '-'}
                   </div>
                 </TableCell>

@@ -12,6 +12,7 @@ import { LocalStorageManager, SyncManager } from '@/lib/persistence'
 import ProtectedRoute from '@/components/protected-route'
 import { useAuth } from '@/contexts/auth-context'
 import AdminDropdownManager from '@/components/admin-dropdown-manager'
+import { TaskNotifications } from '@/components/task-notifications'
 
 function TasksPageContent() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -308,6 +309,7 @@ function TasksPageContent() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Master Task Tracker</h1>
           <div className="flex items-center gap-3">
+            <TaskNotifications tasks={tasks} />
             <Button
               onClick={() => setIsAdminOpen(true)}
               variant="outline"

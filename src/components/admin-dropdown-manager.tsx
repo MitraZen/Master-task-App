@@ -26,6 +26,7 @@ export default function AdminDropdownManager({ isOpen, onClose }: AdminDropdownM
   const [selectedField, setSelectedField] = useState<string>('')
 
   const fieldNames = [
+    'project',
     'stage_gates',
     'task_type', 
     'frequency',
@@ -35,6 +36,7 @@ export default function AdminDropdownManager({ isOpen, onClose }: AdminDropdownM
   ]
 
   const fieldLabels: Record<string, string> = {
+    project: 'Project',
     stage_gates: 'Stage Gates',
     task_type: 'Task Type',
     frequency: 'Frequency',

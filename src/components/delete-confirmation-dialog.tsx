@@ -52,7 +52,7 @@ export function DeleteConfirmationDialog({
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Task #{task.task_no}:</span>
+                <span className="text-sm font-medium text-gray-700">Task #{task.project}-{task.task_no.toString().padStart(3, '0')}:</span>
                 <span className="text-sm text-gray-900">{task.task_description}</span>
               </div>
               <div className="flex items-center gap-4 text-xs text-gray-600">

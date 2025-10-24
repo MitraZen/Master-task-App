@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS dropdown_options (
 CREATE TABLE IF NOT EXISTS tasks (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   task_no INTEGER GENERATED ALWAYS AS IDENTITY, -- Auto-incrementing task number
+  project TEXT NOT NULL DEFAULT 'DEFAULT', -- Project identifier
   stage_gates TEXT NOT NULL CHECK (stage_gates IN ('SG1', 'SG2', 'SG3', 'SG4', 'SG5', 'FID', 'FDD')),
   task_type TEXT NOT NULL CHECK (task_type IN ('Initiation', 'Requirements', 'Design', 'Development', 'Testing', 'ERS', 'S&T', 'SOM', 'Snow', 'Go_Live', 'Discovery', 'Cutover', 'AtD', 'AtO', 'KT', 'Hypercare')),
   frequency TEXT NOT NULL CHECK (frequency IN ('Daily', 'Weekly', 'Monthly', 'Yearly', 'Adhoc')),
@@ -52,6 +53,15 @@ END $$;
 -- Add missing columns to existing tasks table
 DO $$ 
 BEGIN
+    -- Add project column
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'tasks' 
+        AND column_name = 'project'
+    ) THEN
+        ALTER TABLE tasks ADD COLUMN project TEXT NOT NULL DEFAULT 'DEFAULT';
+    END IF;
+    
     -- Add task_no column (as regular integer, not identity for existing table)
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
@@ -138,6 +148,14 @@ END $$;
 
 -- Insert default dropdown options
 INSERT INTO dropdown_options (field_name, option_value, option_label, sort_order) VALUES
+  -- Projects
+  ('project', 'DEFAULT', 'Default Project', 1),
+  ('project', 'PROJ-A', 'Project Alpha', 2),
+  ('project', 'PROJ-B', 'Project Beta', 3),
+  ('project', 'PROJ-C', 'Project Charlie', 4),
+  ('project', 'MAINT', 'Maintenance', 5),
+  ('project', 'R&D', 'Research & Development', 6),
+  
   -- Stage Gates
   ('stage_gates', 'SG1', 'SG1', 1),
   ('stage_gates', 'SG2', 'SG2', 2),
@@ -191,13 +209,14 @@ ON CONFLICT (field_name, option_value) DO NOTHING;
 -- Insert default field configurations
 INSERT INTO task_fields_config (field_name, field_type, visible, sort_order) VALUES
   ('task_no', 'number', true, 1),
-  ('stage_gates', 'select', true, 2),
-  ('task_type', 'select', true, 3),
-  ('frequency', 'select', true, 4),
-  ('priority', 'select', true, 5),
-  ('task_description', 'text', true, 6),
-  ('assigned_to', 'text', true, 7),
-  ('start_date', 'date', true, 8),
+  ('project', 'select', true, 2),
+  ('stage_gates', 'select', true, 3),
+  ('task_type', 'select', true, 4),
+  ('frequency', 'select', true, 5),
+  ('priority', 'select', true, 6),
+  ('task_description', 'text', true, 7),
+  ('assigned_to', 'text', true, 8),
+  ('start_date', 'date', true, 9),
   ('due_date', 'date', true, 9),
   ('est_hours', 'number', false, 10), -- Deprecated: ETR is now calculated from due_date
   ('status', 'select', true, 11),

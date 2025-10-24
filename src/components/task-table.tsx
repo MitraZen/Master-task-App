@@ -185,7 +185,11 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate }: T
           <TableBody>
             {filteredTasks.map((task) => (
               <TableRow key={task.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium text-center">{task.task_no}</TableCell>
+                <TableCell className="font-medium text-center">
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
+                    {task.project}-{task.task_no.toString().padStart(3, '0')}
+                  </span>
+                </TableCell>
                 <TableCell className="text-center">
                   <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 text-xs">
                     {task.stage_gates}

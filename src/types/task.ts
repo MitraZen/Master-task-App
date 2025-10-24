@@ -1,6 +1,7 @@
 export interface Task {
   id: string
   task_no: number
+  project: string
   stage_gates: string
   task_type: string
   frequency: string
@@ -39,6 +40,7 @@ export interface DropdownOption {
 }
 
 export interface CreateTaskData {
+  project: string
   stage_gates: Task['stage_gates']
   task_type: Task['task_type']
   frequency: Task['frequency']

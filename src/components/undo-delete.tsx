@@ -54,7 +54,7 @@ export function UndoDelete({ deletedTask, onUndo, onDismiss }: UndoDeleteProps) 
               Task deleted
             </p>
             <p className="text-xs text-gray-600 truncate">
-              Task #{deletedTask.task_no}: {deletedTask.task_description}
+              Task #{deletedTask.project}-{deletedTask.task_no.toString().padStart(3, '0')}: {deletedTask.task_description}
             </p>
             <p className="text-xs text-gray-500">
               Undo available for {timeLeft} seconds

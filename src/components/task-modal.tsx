@@ -19,6 +19,7 @@ interface TaskModalProps {
 
 export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
   const [formData, setFormData] = useState({
+    project: 'DEFAULT',
     stage_gates: 'SG1',
     task_type: 'Initiation',
     frequency: 'Daily',
@@ -40,6 +41,7 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
   const [taskTypeOptions, setTaskTypeOptions] = useState<DropdownOption[]>([])
   const [frequencyOptions, setFrequencyOptions] = useState<DropdownOption[]>([])
   const [priorityOptions, setPriorityOptions] = useState<DropdownOption[]>([])
+  const [projectOptions, setProjectOptions] = useState<DropdownOption[]>([])
 
   useEffect(() => {
     if (isOpen) {
@@ -49,6 +51,7 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
       fetchTaskTypeOptions()
       fetchFrequencyOptions()
       fetchPriorityOptions()
+      fetchProjectOptions()
     }
   }, [isOpen])
 
@@ -124,9 +127,22 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
     }
   }
 
+  const fetchProjectOptions = async () => {
+    try {
+      const response = await fetch('/api/admin/dropdown-options?field_name=project')
+      if (response.ok) {
+        const data = await response.json()
+        setProjectOptions(data.options || [])
+      }
+    } catch (error) {
+      console.error('Error fetching project options:', error)
+    }
+  }
+
   useEffect(() => {
     if (task) {
       setFormData({
+        project: task.project,
         stage_gates: task.stage_gates,
         task_type: task.task_type,
         frequency: task.frequency,
@@ -143,6 +159,7 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
       })
     } else {
       setFormData({
+        project: 'DEFAULT',
         stage_gates: 'SG1',
         task_type: 'Initiation',
         frequency: 'Daily',
@@ -183,6 +200,25 @@ export function TaskModal({ isOpen, onClose, onSave, task }: TaskModalProps) {
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="project">Project *</Label>
+              <Select
+                value={formData.project}
+                onValueChange={(value) => handleInputChange('project', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectOptions.map(option => (
+                    <SelectItem key={option.option_value} value={option.option_value}>
+                      {option.option_label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="stage_gates">Stage Gates</Label>
               <Select

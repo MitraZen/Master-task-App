@@ -53,7 +53,6 @@ export interface CreateTaskData {
   due_date: string
   est_hours: number
   status: Task['status']
-  percent_complete: number
   done: boolean
   notes?: string
 }

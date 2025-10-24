@@ -191,7 +191,7 @@ function TasksPageContent() {
         // Restore task to local state if network error
         setTasks(prev => [...prev, taskToDelete])
         
-        if (error.name === 'AbortError') {
+        if (error instanceof Error && error.name === 'AbortError') {
           showToast.error('Request timed out. Task deleted locally but may not be synced.')
         } else {
           showToast.error('Network error. Task deleted locally but may not be synced.')

@@ -67,22 +67,17 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
 
   const handleTaskSave = async (taskData: CreateTaskData) => {
     if (editingTask) {
-      // If task is being marked as done (wasn't done before but is now), calculate and store final_etr
-      // If task is being unmarked (was done but now isn't), clear final_etr and completed_at
-      let final_etr: number | undefined = editingTask.final_etr
+      // If task is being marked as done (wasn't done before but is now), capture completion date
+      // If task is being unmarked (was done but now isn't), clear completed_at
       let completed_at: string | undefined = editingTask.completed_at
       
       if (taskData.done && !editingTask.done) {
-        // Task is being marked as complete - calculate ETR using the form's due_date and capture completion date
-        final_etr = calculateDaysRemaining(taskData.due_date)
+        // Task is being marked as complete - capture completion date
         completed_at = new Date().toISOString().split('T')[0]
       } else if (!taskData.done && editingTask.done) {
-        // Task is being unmarked - clear final_etr and completed_at
-        final_etr = undefined
+        // Task is being unmarked - clear completed_at
         completed_at = undefined
       }
-      // If due_date changed and task is done, recalculate final_etr (optional - you might want to preserve original)
-      // For now, we'll only set it when marking complete, not when editing a completed task
       
       onTaskUpdate({ 
         ...taskData, 
@@ -91,14 +86,12 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
         is_archived: editingTask.is_archived,
         created_at: editingTask.created_at,
         updated_at: editingTask.updated_at,
-        final_etr,
         completed_at
       })
     } else {
-      // For new tasks, if created as done, calculate final_etr and capture completion date
-      const final_etr = taskData.done ? calculateDaysRemaining(taskData.due_date) : undefined
+      // For new tasks, if created as done, capture completion date
       const completed_at = taskData.done ? new Date().toISOString().split('T')[0] : undefined
-      onTaskCreate({ ...taskData, final_etr, completed_at })
+      onTaskCreate({ ...taskData, completed_at })
     }
     handleModalClose()
   }
@@ -106,11 +99,8 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
   const handleToggleDone = async (task: Task) => {
     const isMarkingComplete = !task.done
     
-    // If marking as complete, calculate and store the ETR and capture completion date
-    // If unmarking, clear the final_etr and completed_at
-    const final_etr = isMarkingComplete 
-      ? calculateDaysRemaining(task.due_date)
-      : undefined
+    // If marking as complete, capture completion date
+    // If unmarking, clear the completed_at
     const completed_at = isMarkingComplete
       ? new Date().toISOString().split('T')[0] // Current date in YYYY-MM-DD format
       : undefined
@@ -119,7 +109,6 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
       ...task,
       done: !task.done,
       status: !task.done ? 'Complete' as const : 'Not Started' as const,
-      final_etr,
       completed_at
     }
     onTaskUpdate(updatedTask)

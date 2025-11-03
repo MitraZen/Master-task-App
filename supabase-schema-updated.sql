@@ -297,18 +297,9 @@ BEGIN
     END IF;
 END $$;
 
--- Add final_etr column to existing tasks table (if it doesn't exist)
+-- Add completed_at column to existing tasks table (if it doesn't exist)
 DO $$ 
 BEGIN
-    -- Add final_etr column if it doesn't exist
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'tasks' 
-        AND column_name = 'final_etr'
-    ) THEN
-        ALTER TABLE tasks ADD COLUMN final_etr INTEGER;
-    END IF;
-    
     -- Add completed_at column if it doesn't exist
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns 
@@ -319,16 +310,12 @@ BEGIN
     END IF;
 END $$;
 
--- Backfill final_etr and completed_at for existing completed tasks
--- Calculate ETR based on due_date (days remaining from current date)
+-- Backfill completed_at for existing completed tasks
 -- Set completed_at to updated_at (best approximation for when task was completed)
 UPDATE tasks 
-SET 
-  final_etr = (due_date::date - CURRENT_DATE)::integer,
-  completed_at = COALESCE(updated_at::date, CURRENT_DATE)
+SET completed_at = COALESCE(updated_at::date, CURRENT_DATE)
 WHERE done = TRUE 
-  AND (final_etr IS NULL OR completed_at IS NULL)
-  AND due_date IS NOT NULL;
+  AND completed_at IS NULL;
 
 -- Insert default dropdown options
 INSERT INTO dropdown_options (field_name, option_value, option_label, sort_order) VALUES

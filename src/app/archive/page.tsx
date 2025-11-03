@@ -25,6 +25,7 @@ export default function ArchivePage() {
   const fetchArchivedTasks = async () => {
     try {
       setLoading(true)
+      // Fetch only archived tasks (is_archived = true) from the API
       const response = await fetch('/api/archive')
       
       if (!response.ok) {
@@ -32,6 +33,7 @@ export default function ArchivePage() {
       }
       
       const data = await response.json()
+      // The API returns only tasks where is_archived = true
       setTasks(data.tasks || [])
     } catch (error) {
       console.error('Error fetching archived tasks:', error)

@@ -297,6 +297,19 @@ BEGIN
     END IF;
 END $$;
 
+-- Add final_etr column to existing tasks table (if it doesn't exist)
+DO $$ 
+BEGIN
+    -- Add final_etr column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'tasks' 
+        AND column_name = 'final_etr'
+    ) THEN
+        ALTER TABLE tasks ADD COLUMN final_etr INTEGER;
+    END IF;
+END $$;
+
 -- Insert default dropdown options
 INSERT INTO dropdown_options (field_name, option_value, option_label, sort_order) VALUES
   -- Projects

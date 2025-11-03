@@ -14,6 +14,7 @@ export interface Task {
   status: string
   done: boolean
   notes?: string
+  final_etr?: number // ETR (days remaining) when task was marked complete
   is_archived: boolean
   archived_at?: string
   created_at: string
@@ -54,6 +55,7 @@ export interface CreateTaskData {
   status: Task['status']
   done: boolean
   notes?: string
+  final_etr?: number
 }
 
 export interface UpdateTaskData extends Partial<CreateTaskData> {

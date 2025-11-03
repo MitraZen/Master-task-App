@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Task, CreateTaskData } from '@/types/task'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, Circle, Edit, Trash2 } from 'lucide-react'
+import { CheckCircle, Circle, Edit, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { TaskModal } from './task-modal'
 import { TaskFilters } from './task-filters'
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog'
@@ -28,9 +28,66 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
 
+  // Month grouping state - track which months are expanded (default all expanded)
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
+
   useEffect(() => {
     setFilteredTasks(tasks)
+    // Initialize all months as expanded when tasks first load
+    if (tasks.length > 0) {
+      const months = new Set<string>()
+      tasks.forEach(task => {
+        const monthKey = getMonthKey(task.due_date)
+        months.add(monthKey)
+      })
+      // Only update if months have changed (new tasks added)
+      setExpandedMonths(prev => {
+        const allMonths = new Set([...prev, ...months])
+        return allMonths.size > prev.size ? allMonths : prev
+      })
+    }
   }, [tasks])
+
+  // Group tasks by month based on due_date
+  const groupTasksByMonth = (tasks: Task[]) => {
+    const grouped: Record<string, Task[]> = {}
+    
+    tasks.forEach(task => {
+      const monthKey = getMonthKey(task.due_date)
+      if (!grouped[monthKey]) {
+        grouped[monthKey] = []
+      }
+      grouped[monthKey].push(task)
+    })
+    
+    // Sort months chronologically by date
+    return Object.entries(grouped).sort((a, b) => {
+      const dateA = new Date(a[1][0].due_date)
+      const dateB = new Date(b[1][0].due_date)
+      return dateA.getTime() - dateB.getTime()
+    })
+  }
+
+  const getMonthKey = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }
+
+  const toggleMonth = (monthKey: string) => {
+    setExpandedMonths(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(monthKey)) {
+        newSet.delete(monthKey)
+      } else {
+        newSet.add(monthKey)
+      }
+      return newSet
+    })
+  }
+
+  const isMonthExpanded = (monthKey: string) => {
+    return expandedMonths.has(monthKey)
+  }
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task)
@@ -197,103 +254,129 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTasks.map((task) => (
-              <TableRow key={task.id} className="hover:bg-gray-50">
-                <TableCell className="font-medium text-center py-2">
-                  <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-semibold">
-                    {task.project}-{task.task_no.toString().padStart(3, '0')}
-                  </span>
-                </TableCell>
-                <TableCell className="text-center py-2">
-                  <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 text-xs px-1.5 py-0.5">
-                    {task.stage_gates}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center py-2">
-                  <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200 text-xs px-1.5 py-0.5">
-                    {task.task_type}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center text-xs py-2">{task.frequency}</TableCell>
-                <TableCell className="text-center py-2">
-                  <Badge className={`${getPriorityColor(task.priority)} text-xs px-1.5 py-0.5`}>
-                    {task.priority}
-                  </Badge>
-                </TableCell>
-                <TableCell className="w-96 py-2">
-                  <div className="whitespace-normal break-words text-gray-900 text-xs leading-tight">
-                    {task.task_description}
-                  </div>
-                </TableCell>
-                <TableCell className="text-center text-xs py-2">{task.assigned_to === 'none' ? 'None' : (task.assigned_to || 'None')}</TableCell>
-                <TableCell className="text-center text-xs py-2">{formatDate(task.start_date)}</TableCell>
-                <TableCell className="text-center text-xs py-2">{formatDate(task.due_date)}</TableCell>
-                <TableCell className="text-center py-2">
-                  {(() => {
-                    // If task is complete, show the completion date
-                    // Otherwise, show days remaining (ETR)
-                    if (task.done && task.completed_at) {
-                      return (
-                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
-                          {formatDate(task.completed_at)}
-                        </span>
-                      )
-                    } else {
-                      const etr = calculateDaysRemaining(task.due_date)
-                      return (
-                        <span className={`${getETRStyling(etr)} text-xs px-1.5 py-0.5 rounded`}>
-                          {etr >= 0 ? `+${etr}` : `${etr}`}
-                        </span>
-                      )
-                    }
-                  })()}
-                </TableCell>
-                <TableCell className="text-center py-2">
-                  <Badge className={`${getStatusColor(task.status)} text-xs px-1.5 py-0.5`}>
-                    {task.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center py-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleToggleDone(task)}
-                    className="p-1 h-6 w-6"
+            {groupTasksByMonth(filteredTasks).map(([monthKey, monthTasks]) => {
+              const isExpanded = isMonthExpanded(monthKey)
+              return (
+                <React.Fragment key={monthKey}>
+                  {/* Month Header Row */}
+                  <TableRow 
+                    className="bg-gray-100 hover:bg-gray-200 cursor-pointer font-semibold"
+                    onClick={() => toggleMonth(monthKey)}
                   >
-                    {task.done ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-gray-400" />
-                    )}
-                  </Button>
-                </TableCell>
-                <TableCell className="text-xs py-2">
-                  <div className="whitespace-normal break-words text-gray-600 max-w-48 leading-tight">
-                    {task.notes || '-'}
-                  </div>
-                </TableCell>
-                <TableCell className="text-center py-2">
-                  <div className="flex justify-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditTask(task)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <Edit className="h-3 w-3 text-blue-600" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteClick(task)}
-                      className="h-6 w-6 p-0"
-                    >
-                      <Trash2 className="h-3 w-3 text-red-600" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                    <TableCell colSpan={14} className="py-3">
+                      <div className="flex items-center gap-2">
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-gray-600" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-gray-600" />
+                        )}
+                        <span className="text-gray-900">
+                          {monthKey} ({monthTasks.length} task{monthTasks.length !== 1 ? 's' : ''})
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {/* Task Rows for this month */}
+                  {isExpanded && monthTasks.map((task) => (
+                    <TableRow key={task.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium text-center py-2">
+                        <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-semibold">
+                          {task.project}-{task.task_no.toString().padStart(3, '0')}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center py-2">
+                        <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 text-xs px-1.5 py-0.5">
+                          {task.stage_gates}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center py-2">
+                        <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200 text-xs px-1.5 py-0.5">
+                          {task.task_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center text-xs py-2">{task.frequency}</TableCell>
+                      <TableCell className="text-center py-2">
+                        <Badge className={`${getPriorityColor(task.priority)} text-xs px-1.5 py-0.5`}>
+                          {task.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="w-96 py-2">
+                        <div className="whitespace-normal break-words text-gray-900 text-xs leading-tight">
+                          {task.task_description}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center text-xs py-2">{task.assigned_to === 'none' ? 'None' : (task.assigned_to || 'None')}</TableCell>
+                      <TableCell className="text-center text-xs py-2">{formatDate(task.start_date)}</TableCell>
+                      <TableCell className="text-center text-xs py-2">{formatDate(task.due_date)}</TableCell>
+                      <TableCell className="text-center py-2">
+                        {(() => {
+                          // If task is complete, show the completion date
+                          // Otherwise, show days remaining (ETR)
+                          if (task.done && task.completed_at) {
+                            return (
+                              <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                                {formatDate(task.completed_at)}
+                              </span>
+                            )
+                          } else {
+                            const etr = calculateDaysRemaining(task.due_date)
+                            return (
+                              <span className={`${getETRStyling(etr)} text-xs px-1.5 py-0.5 rounded`}>
+                                {etr >= 0 ? `+${etr}` : `${etr}`}
+                              </span>
+                            )
+                          }
+                        })()}
+                      </TableCell>
+                      <TableCell className="text-center py-2">
+                        <Badge className={`${getStatusColor(task.status)} text-xs px-1.5 py-0.5`}>
+                          {task.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center py-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleDone(task)}
+                          className="p-1 h-6 w-6"
+                        >
+                          {task.done ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Circle className="h-4 w-4 text-gray-400" />
+                          )}
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-xs py-2">
+                        <div className="whitespace-normal break-words text-gray-600 max-w-48 leading-tight">
+                          {task.notes || '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center py-2">
+                        <div className="flex justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditTask(task)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Edit className="h-3 w-3 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(task)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Trash2 className="h-3 w-3 text-red-600" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </React.Fragment>
+              )
+            })}
           </TableBody>
         </Table>
       </div>

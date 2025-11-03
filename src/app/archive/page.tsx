@@ -3,18 +3,15 @@
 import { useState, useEffect } from 'react'
 import { Task } from '@/types/task'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { 
   Archive, 
   RotateCcw, 
   Trash2, 
-  Calendar, 
-  User, 
   ArrowLeft,
-  CheckSquare,
-  Square
+  CheckCircle,
+  Circle
 } from 'lucide-react'
 import { showToast } from '@/components/toast'
 import Link from 'next/link'
@@ -22,7 +19,7 @@ import Link from 'next/link'
 export default function ArchivePage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set())
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [isOperating, setIsOperating] = useState(false)
 
   const fetchArchivedTasks = async () => {
@@ -49,21 +46,7 @@ export default function ArchivePage() {
   }, [])
 
   const handleSelectTask = (taskId: string) => {
-    const newSelected = new Set(selectedTasks)
-    if (newSelected.has(taskId)) {
-      newSelected.delete(taskId)
-    } else {
-      newSelected.add(taskId)
-    }
-    setSelectedTasks(newSelected)
-  }
-
-  const handleSelectAll = () => {
-    if (selectedTasks.size === tasks.length) {
-      setSelectedTasks(new Set())
-    } else {
-      setSelectedTasks(new Set(tasks.map(task => task.id)))
-    }
+    setSelectedTaskId(selectedTaskId === taskId ? null : taskId)
   }
 
   const handleRestoreTask = async (taskId: string) => {
@@ -81,11 +64,9 @@ export default function ArchivePage() {
 
       // Remove from local state
       setTasks(prev => prev.filter(task => task.id !== taskId))
-      setSelectedTasks(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(taskId)
-        return newSet
-      })
+      if (selectedTaskId === taskId) {
+        setSelectedTaskId(null)
+      }
 
       showToast.success('Task restored successfully')
     } catch (error) {
@@ -115,11 +96,9 @@ export default function ArchivePage() {
 
       // Remove from local state
       setTasks(prev => prev.filter(task => task.id !== taskId))
-      setSelectedTasks(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(taskId)
-        return newSet
-      })
+      if (selectedTaskId === taskId) {
+        setSelectedTaskId(null)
+      }
 
       showToast.success('Task permanently deleted')
     } catch (error) {
@@ -130,72 +109,57 @@ export default function ArchivePage() {
     }
   }
 
-  const handleBulkRestore = async () => {
-    if (selectedTasks.size === 0) return
-
-    try {
-      setIsOperating(true)
-      const restorePromises = Array.from(selectedTasks).map(taskId =>
-        fetch('/api/archive', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ taskId })
-        })
-      )
-
-      await Promise.all(restorePromises)
-
-      // Remove restored tasks from local state
-      setTasks(prev => prev.filter(task => !selectedTasks.has(task.id)))
-      setSelectedTasks(new Set())
-
-      showToast.success(`${selectedTasks.size} tasks restored successfully`)
-    } catch (error) {
-      console.error('Error restoring tasks:', error)
-      showToast.error('Failed to restore some tasks')
-    } finally {
-      setIsOperating(false)
-    }
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedTasks.size === 0) return
-
-    if (!confirm(`Are you sure you want to permanently delete ${selectedTasks.size} tasks? This action cannot be undone.`)) {
+  const handleRestoreSelected = async () => {
+    if (!selectedTaskId) {
+      showToast.error('Please select a task to restore')
       return
     }
 
-    try {
-      setIsOperating(true)
-      const deletePromises = Array.from(selectedTasks).map(taskId =>
-        fetch('/api/archive', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ taskId })
-        })
-      )
-
-      await Promise.all(deletePromises)
-
-      // Remove deleted tasks from local state
-      setTasks(prev => prev.filter(task => !selectedTasks.has(task.id)))
-      setSelectedTasks(new Set())
-
-      showToast.success(`${selectedTasks.size} tasks permanently deleted`)
-    } catch (error) {
-      console.error('Error deleting tasks:', error)
-      showToast.error('Failed to delete some tasks')
-    } finally {
-      setIsOperating(false)
-    }
+    await handleRestoreTask(selectedTaskId)
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString()
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
   }
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString()
+    return new Date(dateString).toLocaleString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'High':
+        return 'bg-red-100 text-red-800 border-red-200'
+      case 'Medium':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'Low':
+        return 'bg-green-100 text-green-800 border-green-200'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Complete':
+        return 'bg-green-100 text-green-800'
+      case 'Overdue':
+        return 'bg-red-100 text-red-800'
+      case 'In Progress':
+        return 'bg-blue-100 text-blue-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
   }
 
   if (loading) {
@@ -214,7 +178,7 @@ export default function ArchivePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
               <Link href="/tasks">
                 <Button variant="outline" size="sm">
@@ -233,63 +197,25 @@ export default function ArchivePage() {
               </div>
             </div>
           </div>
+
+          {/* Restore Selected Button */}
+          {selectedTaskId && (
+            <div className="flex justify-end mb-4">
+              <Button
+                onClick={handleRestoreSelected}
+                disabled={isOperating}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Restore Selected Task
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Bulk Actions */}
-        {tasks.length > 0 && (
-          <Card className="p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSelectAll}
-                  disabled={isOperating}
-                >
-                  {selectedTasks.size === tasks.length ? (
-                    <CheckSquare className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Square className="h-4 w-4 mr-2" />
-                  )}
-                  {selectedTasks.size === tasks.length ? 'Deselect All' : 'Select All'}
-                </Button>
-                
-                {selectedTasks.size > 0 && (
-                  <span className="text-sm text-gray-600">
-                    {selectedTasks.size} selected
-                  </span>
-                )}
-              </div>
-
-              {selectedTasks.size > 0 && (
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBulkRestore}
-                    disabled={isOperating}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Restore Selected
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleBulkDelete}
-                    disabled={isOperating}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Selected
-                  </Button>
-                </div>
-              )}
-            </div>
-          </Card>
-        )}
-
-        {/* Tasks List */}
+        {/* Tasks Table */}
         {tasks.length === 0 ? (
-          <Card className="p-12 text-center">
+          <div className="border rounded-lg p-12 text-center bg-white">
             <Archive className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No archived tasks</h3>
             <p className="text-gray-600 mb-6">
@@ -301,85 +227,133 @@ export default function ArchivePage() {
                 Back to Tasks
               </Button>
             </Link>
-          </Card>
+          </div>
         ) : (
-          <div className="space-y-4">
-            {tasks.map((task) => (
-              <Card key={task.id} className="p-6">
-                <div className="flex items-start space-x-4">
-                  <Checkbox
-                    checked={selectedTasks.has(task.id)}
-                    onCheckedChange={() => handleSelectTask(task.id)}
-                    disabled={isOperating}
-                  />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="text-lg font-medium text-gray-900 truncate">
-                            {task.project}-{task.task_no.toString().padStart(3, '0')}
-                          </h3>
-                          <Badge variant="secondary">{task.stage_gates}</Badge>
-                          <Badge variant="outline">{task.task_type}</Badge>
-                        </div>
-                        
-                        <p className="text-gray-900 mb-3">{task.task_description}</p>
-                        
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
-                            Due: {formatDate(task.due_date)}
-                          </div>
-                          {task.assigned_to && (
-                            <div className="flex items-center">
-                              <User className="h-4 w-4 mr-1" />
-                              {task.assigned_to}
-                            </div>
-                          )}
-                          <div className="flex items-center">
-                            <Badge 
-                              variant={task.priority === 'High' ? 'destructive' : task.priority === 'Medium' ? 'default' : 'secondary'}
-                            >
-                              {task.priority}
-                            </Badge>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-2 text-xs text-gray-500">
-                          Archived: {formatDateTime(task.archived_at || task.updated_at)}
-                        </div>
+          <div className="border rounded-lg overflow-hidden bg-white">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-orange-600 text-white">
+                  <TableHead className="text-white font-semibold w-12 py-2 text-center">Select</TableHead>
+                  <TableHead className="text-white font-semibold w-20 py-2">Task No</TableHead>
+                  <TableHead className="text-white font-semibold w-24 py-2">Stage Gates</TableHead>
+                  <TableHead className="text-white font-semibold w-28 py-2">Task Type</TableHead>
+                  <TableHead className="text-white font-semibold w-20 py-2">Frequency</TableHead>
+                  <TableHead className="text-white font-semibold w-20 py-2">Priority</TableHead>
+                  <TableHead className="text-white font-semibold w-96 py-2">Task Description</TableHead>
+                  <TableHead className="text-white font-semibold w-24 py-2">Assigned To</TableHead>
+                  <TableHead className="text-white font-semibold w-24 py-2">Due Date</TableHead>
+                  <TableHead className="text-white font-semibold w-28 py-2">ETR</TableHead>
+                  <TableHead className="text-white font-semibold w-24 py-2">Status</TableHead>
+                  <TableHead className="text-white font-semibold w-32 py-2">Archived At</TableHead>
+                  <TableHead className="text-white font-semibold w-24 py-2">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tasks.map((task) => (
+                  <TableRow key={task.id} className="hover:bg-gray-50">
+                    <TableCell className="text-center py-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTask(task.id)}
+                        disabled={isOperating}
+                        className="p-1 h-6 w-6 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 rounded-full"
+                      >
+                        {selectedTaskId === task.id ? (
+                          <CheckCircle className="h-5 w-5 text-orange-600" />
+                        ) : (
+                          <Circle className="h-5 w-5 text-gray-400" />
+                        )}
+                      </button>
+                    </TableCell>
+                    <TableCell className="font-medium text-center py-2">
+                      <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-semibold">
+                        {task.project}-{task.task_no.toString().padStart(3, '0')}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center py-2">
+                      <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 text-xs px-1.5 py-0.5">
+                        {task.stage_gates}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center py-2">
+                      <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200 text-xs px-1.5 py-0.5">
+                        {task.task_type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-xs py-2">{task.frequency}</TableCell>
+                    <TableCell className="text-center py-2">
+                      <Badge className={`${getPriorityColor(task.priority)} text-xs px-1.5 py-0.5`}>
+                        {task.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="w-96 py-2">
+                      <div className="whitespace-normal break-words text-gray-900 text-xs leading-tight">
+                        {task.task_description}
                       </div>
-                      
-                      <div className="flex items-center space-x-2 ml-4">
+                    </TableCell>
+                    <TableCell className="text-center text-xs py-2">{task.assigned_to === 'none' ? 'None' : (task.assigned_to || 'None')}</TableCell>
+                    <TableCell className="text-center text-xs py-2">{formatDate(task.due_date)}</TableCell>
+                    <TableCell className="text-center py-2">
+                      {(() => {
+                        // Show completion date if task is complete, otherwise show days remaining
+                        if (task.done && task.completed_at) {
+                          return (
+                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                              {formatDate(task.completed_at)}
+                            </span>
+                          )
+                        } else {
+                          const today = new Date()
+                          const due = new Date(task.due_date)
+                          const diffTime = due.getTime() - today.getTime()
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                          return (
+                            <span className={`${diffDays < 0 ? 'bg-red-500 text-white' : 'bg-blue-500 text-black'} text-xs px-1.5 py-0.5 rounded`}>
+                              {diffDays >= 0 ? `+${diffDays}` : `${diffDays}`}
+                            </span>
+                          )
+                        }
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-center py-2">
+                      <Badge className={`${getStatusColor(task.status)} text-xs px-1.5 py-0.5`}>
+                        {task.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-xs py-2 text-gray-600">
+                      {formatDateTime(task.archived_at || task.updated_at)}
+                    </TableCell>
+                    <TableCell className="text-center py-2">
+                      <div className="flex justify-center gap-1">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleRestoreTask(task.id)}
                           disabled={isOperating}
+                          className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
+                          title="Restore"
                         >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Restore
+                          <RotateCcw className="h-3 w-3" />
                         </Button>
                         <Button
-                          variant="destructive"
+                          variant="ghost"
                           size="sm"
                           onClick={() => handlePermanentDelete(task.id)}
                           disabled={isOperating}
+                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                          title="Delete Permanently"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
     </div>
   )
 }
-

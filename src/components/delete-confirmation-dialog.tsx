@@ -63,10 +63,23 @@ export function DeleteConfirmationDialog({
             </div>
           </div>
           
-          <div className="mt-4 rounded-lg bg-blue-50 border border-blue-200 p-3">
+          {/* Warning for non-completed tasks */}
+          {!task.done && (
+            <div className="mt-4 rounded-lg bg-red-50 border border-red-200 p-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-red-800">
+                  <p className="font-medium">Warning: Task Not Completed</p>
+                  <p>This task has not been marked as done. Are you sure you want to archive an incomplete task?</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className={`mt-4 rounded-lg ${!task.done ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'} border p-3`}>
             <div className="flex items-start gap-2">
-              <Archive className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
+              <Archive className={`h-4 w-4 ${!task.done ? 'text-yellow-600' : 'text-blue-600'} mt-0.5 flex-shrink-0`} />
+              <div className={`text-sm ${!task.done ? 'text-yellow-800' : 'text-blue-800'}`}>
                 <p className="font-medium">Archive Information:</p>
                 <p>This task will be moved to the archive where you can restore it later or permanently delete it from the Archive page.</p>
               </div>

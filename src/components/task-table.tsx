@@ -68,15 +68,18 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
   const handleTaskSave = async (taskData: CreateTaskData) => {
     if (editingTask) {
       // If task is being marked as done (wasn't done before but is now), calculate and store final_etr
-      // If task is being unmarked (was done but now isn't), clear final_etr
+      // If task is being unmarked (was done but now isn't), clear final_etr and completed_at
       let final_etr: number | undefined = editingTask.final_etr
+      let completed_at: string | undefined = editingTask.completed_at
       
       if (taskData.done && !editingTask.done) {
-        // Task is being marked as complete - calculate ETR using the form's due_date
+        // Task is being marked as complete - calculate ETR using the form's due_date and capture completion date
         final_etr = calculateDaysRemaining(taskData.due_date)
+        completed_at = new Date().toISOString().split('T')[0]
       } else if (!taskData.done && editingTask.done) {
-        // Task is being unmarked - clear final_etr
+        // Task is being unmarked - clear final_etr and completed_at
         final_etr = undefined
+        completed_at = undefined
       }
       // If due_date changed and task is done, recalculate final_etr (optional - you might want to preserve original)
       // For now, we'll only set it when marking complete, not when editing a completed task
@@ -88,12 +91,14 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
         is_archived: editingTask.is_archived,
         created_at: editingTask.created_at,
         updated_at: editingTask.updated_at,
-        final_etr
+        final_etr,
+        completed_at
       })
     } else {
-      // For new tasks, if created as done, calculate final_etr
+      // For new tasks, if created as done, calculate final_etr and capture completion date
       const final_etr = taskData.done ? calculateDaysRemaining(taskData.due_date) : undefined
-      onTaskCreate({ ...taskData, final_etr })
+      const completed_at = taskData.done ? new Date().toISOString().split('T')[0] : undefined
+      onTaskCreate({ ...taskData, final_etr, completed_at })
     }
     handleModalClose()
   }
@@ -101,17 +106,21 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
   const handleToggleDone = async (task: Task) => {
     const isMarkingComplete = !task.done
     
-    // If marking as complete, calculate and store the ETR
-    // If unmarking, clear the final_etr
+    // If marking as complete, calculate and store the ETR and capture completion date
+    // If unmarking, clear the final_etr and completed_at
     const final_etr = isMarkingComplete 
       ? calculateDaysRemaining(task.due_date)
+      : undefined
+    const completed_at = isMarkingComplete
+      ? new Date().toISOString().split('T')[0] // Current date in YYYY-MM-DD format
       : undefined
     
     const updatedTask = {
       ...task,
       done: !task.done,
       status: !task.done ? 'Complete' as const : 'Not Started' as const,
-      final_etr
+      final_etr,
+      completed_at
     }
     onTaskUpdate(updatedTask)
   }
@@ -232,16 +241,22 @@ export function TaskTable({ tasks, onTaskUpdate, onTaskDelete, onTaskCreate, onT
                 <TableCell className="text-center text-xs py-2">{formatDate(task.due_date)}</TableCell>
                 <TableCell className="text-center py-2">
                   {(() => {
-                    // If task is complete, use the stored final_etr
-                    // Otherwise, calculate dynamically
-                    const etr = task.done && task.final_etr !== undefined 
-                      ? task.final_etr 
-                      : calculateDaysRemaining(task.due_date)
-                    return (
-                      <span className={`${getETRStyling(etr)} text-xs px-1.5 py-0.5 rounded`}>
-                        {etr >= 0 ? `+${etr}` : `${etr}`}
-                      </span>
-                    )
+                    // If task is complete, show the completion date
+                    // Otherwise, show days remaining (ETR)
+                    if (task.done && task.completed_at) {
+                      return (
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                          {formatDate(task.completed_at)}
+                        </span>
+                      )
+                    } else {
+                      const etr = calculateDaysRemaining(task.due_date)
+                      return (
+                        <span className={`${getETRStyling(etr)} text-xs px-1.5 py-0.5 rounded`}>
+                          {etr >= 0 ? `+${etr}` : `${etr}`}
+                        </span>
+                      )
+                    }
                   })()}
                 </TableCell>
                 <TableCell className="text-center py-2">

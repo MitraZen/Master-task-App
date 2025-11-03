@@ -10,12 +10,14 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'archived_at'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    // Explicitly filter for archived tasks only - ensure is_archived is exactly true
-    // Also ensure archived_at is not null (an archived task should have an archived date)
+    // Explicitly filter for archived tasks only
+    // Rule: Only tasks where done = true can be archived
+    // Ensure is_archived is exactly true and archived_at is not null
     const { data: tasks, error } = await supabase
       .from('tasks')
       .select('*')
       .eq('is_archived', true)
+      .eq('done', true) // Only show archived tasks that are completed
       .not('archived_at', 'is', null) // Ensure archived_at is not null
       .order(sortBy, { ascending: sortOrder === 'asc' })
 
@@ -25,8 +27,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Additional client-side filter as a safety measure
+    // Only show tasks that are done, archived, and have an archived_at date
     const archivedTasks = (tasks || []).filter(task => 
-      task.is_archived === true && task.archived_at !== null
+      task.done === true && 
+      task.is_archived === true && 
+      task.archived_at !== null
     )
 
     return NextResponse.json({ tasks: archivedTasks })
@@ -37,6 +42,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/archive - Archive a task (soft delete)
+// Rule: Only tasks where done = true can be archived
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -46,6 +52,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Task ID is required' }, { status: 400 })
     }
 
+    // First check if task is completed - only completed tasks can be archived
+    const { data: existingTask, error: fetchError } = await supabase
+      .from('tasks')
+      .select('done')
+      .eq('id', taskId)
+      .single()
+
+    if (fetchError || !existingTask) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+    }
+
+    if (!existingTask.done) {
+      return NextResponse.json({ 
+        error: 'Only completed tasks can be archived. Please mark the task as done first.' 
+      }, { status: 400 })
+    }
+
+    // Archive the task (it's already done)
     const { data: task, error } = await supabase
       .from('tasks')
       .update({ 
@@ -53,6 +77,7 @@ export async function POST(request: NextRequest) {
         archived_at: new Date().toISOString() 
       })
       .eq('id', taskId)
+      .eq('done', true) // Only archive completed tasks
       .eq('is_archived', false) // Only archive non-archived tasks
       .select()
       .single()

@@ -297,6 +297,18 @@ BEGIN
     END IF;
 END $$;
 
+-- Remove final_etr column if it exists (no longer needed - using completed_at only)
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'tasks' 
+        AND column_name = 'final_etr'
+    ) THEN
+        ALTER TABLE tasks DROP COLUMN final_etr;
+    END IF;
+END $$;
+
 -- Add completed_at column to existing tasks table (if it doesn't exist)
 DO $$ 
 BEGIN

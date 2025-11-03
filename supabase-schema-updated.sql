@@ -310,6 +310,16 @@ BEGIN
     END IF;
 END $$;
 
+-- Backfill final_etr for existing completed tasks
+-- Calculate ETR based on due_date (days remaining from current date)
+-- This freezes the ETR at its current value for tasks already marked as complete
+-- PostgreSQL date subtraction returns integer days directly
+UPDATE tasks 
+SET final_etr = (due_date::date - CURRENT_DATE)::integer
+WHERE done = TRUE 
+  AND final_etr IS NULL
+  AND due_date IS NOT NULL;
+
 -- Insert default dropdown options
 INSERT INTO dropdown_options (field_name, option_value, option_label, sort_order) VALUES
   -- Projects

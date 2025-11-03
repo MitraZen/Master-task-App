@@ -28,6 +28,49 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
 
     const { id: bodyId, ...updateData } = body
 
+    // Get the current task to compare dates
+    const { data: currentTask } = await supabase
+      .from('tasks')
+      .select('start_date, due_date, status, done')
+      .eq('id', id)
+      .single()
+
+    // If start_date or due_date is being updated, we need to re-evaluate status
+    // The database trigger will handle this, but we can also do client-side validation
+    if (updateData.start_date || updateData.due_date || updateData.done !== undefined) {
+      const newStartDate = updateData.start_date ? new Date(updateData.start_date) : (currentTask ? new Date(currentTask.start_date) : null)
+      const newDueDate = updateData.due_date ? new Date(updateData.due_date) : (currentTask ? new Date(currentTask.due_date) : null)
+      const isDone = updateData.done !== undefined ? updateData.done : (currentTask ? currentTask.done : false)
+      
+      // Only auto-update status if task is not done
+      if (!isDone) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        if (newDueDate && newDueDate < today) {
+          // Due date is in the past -> Overdue
+          updateData.status = 'Overdue'
+        } else if (newDueDate && newDueDate >= today) {
+          // Due date is today or in the future
+          if (newStartDate && newStartDate > today) {
+            // Start date is in the future -> Not Started
+            updateData.status = 'Not Started'
+          } else {
+            // Start date is today or in the past -> In Progress
+            // If it was overdue before, moving to In Progress
+            if (currentTask && currentTask.status === 'Overdue') {
+              updateData.status = 'In Progress'
+            } else if (!updateData.status) {
+              // Only set if status wasn't explicitly provided
+              updateData.status = currentTask?.status === 'Not Started' && newStartDate && newStartDate <= today 
+                ? 'In Progress' 
+                : (currentTask?.status || 'In Progress')
+            }
+          }
+        }
+      }
+    }
+
     const { data: task, error } = await supabase
       .from('tasks')
       .update(updateData)

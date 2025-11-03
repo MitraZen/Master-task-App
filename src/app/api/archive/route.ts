@@ -10,18 +10,28 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'archived_at'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
+    // Explicitly filter for archived tasks only - ensure is_archived is exactly true
+    // Also ensure archived_at is not null (an archived task should have an archived date)
     const { data: tasks, error } = await supabase
       .from('tasks')
       .select('*')
       .eq('is_archived', true)
+      .not('archived_at', 'is', null) // Ensure archived_at is not null
       .order(sortBy, { ascending: sortOrder === 'asc' })
 
     if (error) {
+      console.error('Error fetching archived tasks:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ tasks })
+    // Additional client-side filter as a safety measure
+    const archivedTasks = (tasks || []).filter(task => 
+      task.is_archived === true && task.archived_at !== null
+    )
+
+    return NextResponse.json({ tasks: archivedTasks })
   } catch (error) {
+    console.error('Archive GET error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

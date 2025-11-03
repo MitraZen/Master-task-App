@@ -60,6 +60,7 @@ export function TaskNotifications({ tasks }: TaskNotificationsProps) {
 
       tasks.forEach(task => {
         if (task.is_archived) return // Skip archived tasks
+        if (task.done || task.status === 'Complete') return // Skip completed tasks
 
         const daysUntilDue = getDaysUntilDue(task.due_date)
         const urgency = getUrgencyLevel(daysUntilDue, task.priority)
